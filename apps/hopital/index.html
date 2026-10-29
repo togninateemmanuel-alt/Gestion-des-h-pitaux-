@@ -1,7 +1,283 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ordonnance Mobile — Hôpital</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../../shared/om-core.js"></script><style>body{font-family:system-ui;max-width:1100px;margin:auto;padding:24px;background:#f5f7fb}article{background:#fff;margin:12px 0;padding:16px;border-radius:14px;box-shadow:0 2px 10px #0001}input,button{padding:9px;margin:4px}button{cursor:pointer}</style></head><body><main><h1>Hôpital</h1><p id="state">Chargement…</p><div id="rdv"></div></main><script>
-const sb=OM.sb,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let me,rows=[];
-async function load(){me=await OM.user();if(!me){$('state').textContent='Non connecté';return}const p=(await sb.from('profiles').select('hopital_id,role').eq('id',me.id).single()).data;if(!p?.hopital_id){$('state').textContent='Compte hospitalier non rattaché';return}$('state').textContent=`Hôpital #${p.hopital_id}`;await refresh();OM.subscribe('hospital-flow',['rendez_vous','ordonnances','constantes'],refresh)}
-async function refresh(){const p=(await sb.from('profiles').select('hopital_id').eq('id',me.id).single()).data;rows=(await sb.from('rendez_vous').select('*,patients(nom,prenom,telephone),constantes(*),ordonnances(*,ordonnance_lignes(*))').eq('hopital_id',p.hopital_id).order('created_at',{ascending:false})).data||[];$('rdv').innerHTML=rows.map(r=>card(r)).join('')||'<p>Aucun rendez-vous.</p>'}
-function card(r){const c=r.constantes?.[0],o=r.ordonnances?.[0];return `<article><b>${esc(r.patients?.nom)} ${esc(r.patients?.prenom)}</b> — ${esc(r.specialite)} — <strong>${esc(r.statut)}</strong><br>Tél: ${esc(r.patients?.telephone)}<br>Constantes: ${c?`${esc(c.temperature)} °C · ${esc(c.tension)} · ${esc(c.poids)} kg`:'à prendre'}${o?`<br>Ordonnance #${o.id}: ${(o.ordonnance_lignes||[]).map(x=>esc(x.medicament)).join(', ')}`:''}<div>${r.statut==='attente'?`<button onclick="constantes(${r.id})">Saisir constantes</button>`:''}${r.statut==='constantes'?`<button onclick="ord(${r.id})">Créer ordonnance</button>`:''}</div></article>`}
-async function constantes(id){const temperature=prompt('Température (°C)','37');if(temperature===null)return;const tension=prompt('Tension','120/80');if(tension===null)return;const poids=prompt('Poids (kg)','70');if(poids===null)return;const r=await sb.from('constantes').insert({rendez_vous_id:id,temperature:Number(temperature),tension,poids:Number(poids),saisi_par:me.id});if(r.error)return alert(r.error.message);const u=await sb.from('rendez_vous').update({statut:'constantes'}).eq('id',id);if(u.error)return alert(u.error.message);refresh()}
-async function ord(id){const r=rows.find(x=>x.id===id);if(!r)return;const medicament=prompt('Médicament','Paracétamol');if(!medicament)return;const posologie=prompt('Posologie','Selon prescription');if(!posologie)return;const o=await sb.from('ordonnances').insert({rendez_vous_id:id,patient_id:r.patient_id,hopital_id:r.hopital_id,medecin_id:me.id,signature:me.email||'Médecin'}).select().single();if(o.error)return alert(o.error.message);const l=await sb.from('ordonnance_lignes').insert({ordonnance_id:o.data.id,medicament,posologie});if(l.error){await sb.from('ordonnances').delete().eq('id',o.data.id);return alert(l.error.message)}const u=await sb.from('rendez_vous').update({statut:'termine',medecin_id:me.id}).eq('id',id);if(u.error)return alert(u.error.message);refresh()}load();</script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ordonnance Mobile — Hôpital</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../shared/om-core.js"></script>
+  <style>
+    :root {
+      --primary: #1e3a5f;
+      --accent: #2563eb;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 16px;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    .app { max-width: 900px; margin: 0 auto; padding: 24px 16px 40px; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary);
+    }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: var(--primary);
+      color: white;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+    }
+    .status-bar {
+      font-size: 0.9rem;
+      color: var(--muted);
+      background: white;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .chip {
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .chip.active, .chip:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+    .patient-name { font-size: 1.1rem; font-weight: 650; }
+    .specialty { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .badge-attente { background: #fef3c7; color: #92400e; }
+    .badge-constantes { background: #dbeafe; color: #1e40af; }
+    .badge-termine { background: #dcfce7; color: #166534; }
+    .vitals {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+      font-size: 0.9rem;
+    }
+    .vital {
+      background: #f8fafc;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .vital strong { display: block; font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+    .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: #e2e8f0; color: var(--text); }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 48px 20px;
+      background: white;
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+    }
+    .ord-preview {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">🏥</div>
+        <span>Ordonnance Mobile — Hôpital</span>
+      </div>
+      <div class="status-bar" id="state">Chargement…</div>
+    </header>
+
+    <div class="filters">
+      <button class="chip active" data-filter="all">Tous</button>
+      <button class="chip" data-filter="attente">En attente</button>
+      <button class="chip" data-filter="constantes">Constantes</button>
+      <button class="chip" data-filter="termine">Terminés</button>
+    </div>
+
+    <div id="rdv"></div>
+  </div>
+
+  <script>
+    const sb = OM.sb;
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]));
+    let me, rows = [], currentFilter = 'all';
+
+    async function load() {
+      me = await OM.user();
+      if (!me) { $('state').textContent = 'Non connecté'; return; }
+      const p = (await sb.from('profiles').select('hopital_id,role').eq('id', me.id).single()).data;
+      if (!p?.hopital_id) { $('state').textContent = 'Compte hospitalier non rattaché'; return; }
+      $('state').textContent = `Hôpital #${p.hopital_id} · Connecté`;
+      await refresh();
+      OM.subscribe('hospital-flow', ['rendez_vous', 'ordonnances', 'constantes'], refresh);
+
+      document.querySelectorAll('.chip').forEach(chip => {
+        chip.onclick = () => {
+          document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          currentFilter = chip.dataset.filter;
+          render();
+        };
+      });
+    }
+
+    async function refresh() {
+      const p = (await sb.from('profiles').select('hopital_id').eq('id', me.id).single()).data;
+      rows = (await sb.from('rendez_vous').select('*,patients(nom,prenom,telephone),constantes(*),ordonnances(*,ordonnance_lignes(*))').eq('hopital_id', p.hopital_id).order('created_at', {ascending: false})).data || [];
+      render();
+    }
+
+    function render() {
+      let filtered = rows;
+      if (currentFilter !== 'all') filtered = rows.filter(r => r.statut === currentFilter);
+      $('rdv').innerHTML = filtered.length ? filtered.map(r => card(r)).join('') : '<div class="empty">Aucun rendez-vous pour ce filtre.</div>';
+    }
+
+    function card(r) {
+      const c = r.constantes?.[0];
+      const o = r.ordonnances?.[0];
+      const badgeClass = r.statut === 'attente' ? 'badge-attente' : r.statut === 'constantes' ? 'badge-constantes' : 'badge-termine';
+      return `
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="patient-name">${esc(r.patients?.prenom)} ${esc(r.patients?.nom)}</div>
+              <div class="specialty">${esc(r.specialite)} · Tél: ${esc(r.patients?.telephone || '—')}</div>
+            </div>
+            <span class="badge ${badgeClass}">${esc(r.statut)}</span>
+          </div>
+          <div class="vitals">
+            <div class="vital"><strong>Température</strong>${c ? esc(c.temperature) + ' °C' : '—'}</div>
+            <div class="vital"><strong>Tension</strong>${c ? esc(c.tension) : '—'}</div>
+            <div class="vital"><strong>Poids</strong>${c ? esc(c.poids) + ' kg' : '—'}</div>
+          </div>
+          ${o ? `<div class="ord-preview">Ordonnance #${o.id}: ${(o.ordonnance_lignes || []).map(x => esc(x.medicament)).join(', ')}</div>` : ''}
+          <div class="actions">
+            ${r.statut === 'attente' ? `<button class="btn btn-primary" onclick="constantes(${r.id})">Saisir constantes</button>` : ''}
+            ${r.statut === 'constantes' ? `<button class="btn btn-primary" onclick="ord(${r.id})">Créer ordonnance</button>` : ''}
+          </div>
+        </div>`;
+    }
+
+    async function constantes(id) {
+      const temperature = prompt('Température (°C)', '37');
+      if (temperature === null) return;
+      const tension = prompt('Tension', '120/80');
+      if (tension === null) return;
+      const poids = prompt('Poids (kg)', '70');
+      if (poids === null) return;
+      const r = await sb.from('constantes').insert({rendez_vous_id: id, temperature: Number(temperature), tension, poids: Number(poids), saisi_par: me.id});
+      if (r.error) return alert(r.error.message);
+      const u = await sb.from('rendez_vous').update({statut: 'constantes'}).eq('id', id);
+      if (u.error) return alert(u.error.message);
+      refresh();
+    }
+
+    async function ord(id) {
+      const r = rows.find(x => x.id === id);
+      if (!r) return;
+      const medicament = prompt('Médicament', 'Paracétamol');
+      if (!medicament) return;
+      const posologie = prompt('Posologie', 'Selon prescription');
+      if (!posologie) return;
+      const o = await sb.from('ordonnances').insert({
+        rendez_vous_id: id,
+        patient_id: r.patient_id,
+        hopital_id: r.hopital_id,
+        medecin_id: me.id,
+        signature: me.email || 'Médecin'
+      }).select().single();
+      if (o.error) return alert(o.error.message);
+      const l = await sb.from('ordonnance_lignes').insert({ordonnance_id: o.data.id, medicament, posologie});
+      if (l.error) {
+        await sb.from('ordonnances').delete().eq('id', o.data.id);
+        return alert(l.error.message);
+      }
+      const u = await sb.from('rendez_vous').update({statut: 'termine', medecin_id: me.id}).eq('id', id);
+      if (u.error) return alert(u.error.message);
+      refresh();
+    }
+
+    load();
+  </script>
+</body>
+</html>
