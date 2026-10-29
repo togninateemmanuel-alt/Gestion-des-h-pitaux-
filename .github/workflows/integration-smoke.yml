@@ -1,0 +1,30 @@
+name: Integration smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify application entrypoints
+        run: |
+          test -s index.html
+          test -s apps/patient/index.html
+          test -s apps/hopital/index.html
+          test -s apps/pharmacie/index.html
+          test -s apps/admin/index.html
+          test -s shared/om-core.js
+          test -s shared/om-contracts.js
+          test -s supabase/migrations/20261029_cross_app.sql
+          test -s supabase/functions/admin-ai-insights/index.ts
+      - name: Check browser clients do not contain service_role
+        run: |
+          if grep -RniE 'service_role|SUPABASE_SERVICE_ROLE_KEY' apps shared; then
+            echo 'service_role detected in browser/shared code'
+            exit 1
+          fi
