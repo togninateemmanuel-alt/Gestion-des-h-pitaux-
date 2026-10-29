@@ -1,6 +1,401 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ordonnance Mobile — Patient</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../../shared/om-core.js"></script><style>body{font-family:system-ui;margin:0;background:#f5f7fb;color:#172033}main{max-width:1000px;margin:auto;padding:24px}section,article{background:#fff;border:1px solid #e4e8f0;border-radius:14px;padding:16px;margin:14px 0}button{padding:9px 13px;border:0;border-radius:8px;background:#14213d;color:#fff}select,input{padding:9px;margin:5px;border:1px solid #ccd3df;border-radius:8px}.muted{color:#667085}</style></head><body><main><h1>Patient</h1><p id="state">Connexion…</p><section><h2>Prendre rendez-vous</h2><select id="h"></select><input id="s" placeholder="Spécialité"><input id="x" placeholder="Symptômes"><button id="book">Réserver</button></section><section><h2>Mes ordonnances</h2><div id="ord"></div></section><section><h2>Commander en pharmacie</h2><p class="muted">Pour chaque médicament prescrit, l’application cherche automatiquement un stock disponible et rattache la commande à l’ordonnance.</p><div id="pharm"></div></section><section><h2>Mes commandes pharmacie</h2><div id="cmd"></div></section></main><script>
-const sb=OM.sb;let user,patient,hosp=[],ords=[],cmds=[];const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-async function load(){user=await OM.user();if(!user){$('state').textContent='Non connecté — connectez-vous via votre interface Auth Supabase.';return}let r=await sb.from('patients').select('*').eq('user_id',user.id).single();patient=r.data;if(!patient){$('state').textContent='Profil patient introuvable';return}hosp=(await sb.from('hopitaux').select('*').eq('publie',true).order('nom')).data||[];$('h').innerHTML=hosp.map(h=>`<option value="${h.id}">${esc(h.nom)}</option>`).join('');await refresh();OM.subscribe('patient-flow',['rendez_vous','ordonnances','commandes_pharmacie'],refresh)}
-async function refresh(){if(!patient)return;const [o,c]=await Promise.all([sb.from('ordonnances').select('*,ordonnance_lignes(*),hopitaux(nom)').eq('patient_id',patient.id).order('id',{ascending:false}),sb.from('commandes_pharmacie').select('*,pharmacies(nom)').eq('patient_id',patient.id).order('id',{ascending:false})]);ords=o.data||[];cmds=c.data||[];$('ord').innerHTML=ords.map(o=>`<article><b>Ordonnance #${o.id}</b> — ${esc(o.hopitaux?.nom)}<br>${(o.ordonnance_lignes||[]).map(l=>`<div>${esc(l.medicament)} — ${esc(l.posologie||'')} ${cmds.some(c=>c.ligne_id===l.id)?'<span class="muted">(commandé)</span>':''}</div>`).join('')}</article>`).join('')||'Aucune';$('pharm').innerHTML=ords.flatMap(o=>(o.ordonnance_lignes||[]).map(l=>({o,l}))).filter(z=>!cmds.some(c=>c.ligne_id===z.l.id)).map(z=>`<article><b>${esc(z.l.medicament)}</b><br><button onclick="orderDrug(${z.o.id},${z.l.id},${JSON.stringify(z.l.medicament)})">Chercher et commander</button></article>`).join('')||'Aucun médicament en attente de commande';$('cmd').innerHTML=cmds.map(c=>`<article>${esc(c.produit)} — ${esc(c.statut)} ${c.pharmacies?.nom?`— ${esc(c.pharmacies.nom)}`:''} ${c.ordonnance_id?`(ordonnance #${c.ordonnance_id})`:''}</article>`).join('')||'Aucune'}
-async function orderDrug(ordonnanceId,ligneId,medicament){const q=String(medicament||'').trim();if(!q)return;const {data:products,error}=await sb.from('produits_pharmacie').select('id,nom,prix,quantite,pharmacie_id').ilike('nom','%'+q+'%').gt('quantite',0).limit(20);if(error||!products?.length)return alert('Aucun stock disponible pour '+q+'.');const x=products[0];const r=await sb.from('commandes_pharmacie').insert({ligne_id:ligneId,ordonnance_id:ordonnanceId,patient_id:patient.id,pharmacie_id:x.pharmacie_id,produit:x.nom,montant:x.prix,mode_paiement:'Espèces',statut:'en_attente'}).select().single();if(r.error)return alert(r.error.message);alert('Commande créée. Rendez-vous à la pharmacie pour le paiement en espèces.');refresh()}
-$('book').onclick=async()=>{const h=hosp.find(x=>x.id==$('h').value);if(!h)return alert('Aucun hôpital disponible.');const r=await sb.from('rendez_vous').insert({patient_id:patient.id,hopital_id:h.id,specialite:$('s').value,symptomes:$('x').value||$('s').value,montant:h.prix_consultation,mode_paiement:'Espèces'}).select().single();if(r.error)alert(r.error.message);else alert('Rendez-vous créé');refresh()};load();</script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ordonnance Mobile — Patient</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../shared/om-core.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 16px;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 0 16px 100px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 12px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--primary);
+    }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      color: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      border: 1px solid var(--border);
+      padding: 6px 12px 6px 6px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+    }
+    .avatar {
+      width: 28px;
+      height: 28px;
+      background: #e0e7ff;
+      color: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+    .status {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    section {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    section h2 {
+      font-size: 1.05rem;
+      font-weight: 650;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    select, input, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      background: #f8fafc;
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-sm {
+      width: auto;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      border-radius: 8px;
+    }
+    .card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .card:last-child { margin-bottom: 0; }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+    .badge-active { background: #dcfce7; color: #166534; }
+    .badge-done { background: #e0e7ff; color: #3730a3; }
+    .badge-wait { background: #fef3c7; color: #92400e; }
+    .med-list { font-size: 0.85rem; color: var(--muted); }
+    .med-list div { margin: 2px 0; }
+    .product-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .product-card {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .product-info { flex: 1; }
+    .product-name { font-weight: 600; font-size: 0.9rem; }
+    .product-price { color: var(--primary); font-weight: 700; margin-top: 2px; }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 24px 12px;
+      font-size: 0.9rem;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .nav-item.active { color: var(--primary); font-weight: 600; }
+    .nav-icon { font-size: 1.25rem; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">+</div>
+        <span>Ordonnance Mobile</span>
+      </div>
+      <div class="user-chip">
+        <div class="avatar" id="avatar">P</div>
+        <span id="user-name">Patient</span>
+      </div>
+    </header>
+
+    <p class="status" id="state">Connexion…</p>
+
+    <section>
+      <h2>📅 Prendre rendez-vous</h2>
+      <div class="form-group">
+        <label>Établissement</label>
+        <select id="h"></select>
+      </div>
+      <div class="form-group">
+        <label>Spécialité</label>
+        <input id="s" placeholder="Ex: Cardiologie, Médecine générale…">
+      </div>
+      <div class="form-group">
+        <label>Symptômes / Motif</label>
+        <textarea id="x" placeholder="Décrivez brièvement vos symptômes…" maxlength="300"></textarea>
+      </div>
+      <button class="btn btn-primary" id="book">Réserver un rendez-vous</button>
+    </section>
+
+    <section>
+      <h2>📋 Mes ordonnances</h2>
+      <div id="ord"></div>
+    </section>
+
+    <section>
+      <h2>🛒 Commander en pharmacie</h2>
+      <div id="pharm" class="product-grid"></div>
+    </section>
+
+    <section>
+      <h2>📦 Mes commandes pharmacie</h2>
+      <div id="cmd"></div>
+    </section>
+  </div>
+
+  <nav class="bottom-nav">
+    <a class="nav-item active" href="#"><span class="nav-icon">🏠</span>Accueil</a>
+    <a class="nav-item" href="#"><span class="nav-icon">📅</span>RDV</a>
+    <a class="nav-item" href="#"><span class="nav-icon">📋</span>Ordonnances</a>
+    <a class="nav-item" href="#"><span class="nav-icon">🛒</span>Pharmacie</a>
+    <a class="nav-item" href="#"><span class="nav-icon">👤</span>Profil</a>
+  </nav>
+
+  <script>
+    const sb = OM.sb;
+    let user, patient, hosp = [], ords = [], cmds = [];
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&','<':'<','>':'>'}[c]));
+
+    async function load() {
+      user = await OM.user();
+      if (!user) {
+        $('state').textContent = 'Non connecté — connectez-vous via votre interface Auth Supabase.';
+        return;
+      }
+      let r = await sb.from('patients').select('*').eq('user_id', user.id).single();
+      patient = r.data;
+      if (!patient) {
+        $('state').textContent = 'Profil patient introuvable';
+        return;
+      }
+      $('state').textContent = 'Connecté';
+      $('user-name').textContent = patient.prenom || patient.nom || 'Patient';
+      $('avatar').textContent = (patient.prenom || patient.nom || 'P')[0].toUpperCase();
+
+      hosp = (await sb.from('hopitaux').select('*').eq('publie', true).order('nom')).data || [];
+      $('h').innerHTML = hosp.map(h => `<option value="${h.id}">${esc(h.nom)}</option>`).join('') || '<option>Aucun hôpital</option>';
+      await refresh();
+      OM.subscribe('patient-flow', ['rendez_vous', 'ordonnances', 'commandes_pharmacie'], refresh);
+    }
+
+    async function refresh() {
+      if (!patient) return;
+      const [o, c] = await Promise.all([
+        sb.from('ordonnances').select('*,ordonnance_lignes(*),hopitaux(nom)').eq('patient_id', patient.id).order('id', {ascending: false}),
+        sb.from('commandes_pharmacie').select('*,pharmacies(nom)').eq('patient_id', patient.id).order('id', {ascending: false})
+      ]);
+      ords = o.data || [];
+      cmds = c.data || [];
+
+      $('ord').innerHTML = ords.length ? ords.map(o => `
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <strong>Ordonnance #${o.id}</strong>
+              <div style="font-size:0.8rem;color:var(--muted)">${esc(o.hopitaux?.nom || '')}</div>
+            </div>
+            <span class="badge badge-active">Active</span>
+          </div>
+          <div class="med-list">
+            ${(o.ordonnance_lignes || []).map(l => `<div>💊 ${esc(l.medicament)} — ${esc(l.posologie || '')} ${cmds.some(c => c.ligne_id === l.id) ? '<span class="badge badge-done">commandé</span>' : ''}</div>`).join('')}
+          </div>
+        </div>`).join('') : '<div class="empty">Aucune ordonnance</div>';
+
+      $('pharm').innerHTML = ords.flatMap(o => (o.ordonnance_lignes || []).map(l => ({o, l})))
+        .filter(z => !cmds.some(c => c.ligne_id === z.l.id))
+        .map(z => `
+          <div class="product-card">
+            <div class="product-info">
+              <div class="product-name">${esc(z.l.medicament)}</div>
+              <div style="font-size:0.8rem;color:var(--muted)">${esc(z.l.posologie || '')}</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="orderDrug(${z.o.id},${z.l.id},${JSON.stringify(z.l.medicament)})">Commander</button>
+          </div>`).join('') || '<div class="empty">Aucun médicament en attente</div>';
+
+      $('cmd').innerHTML = cmds.length ? cmds.map(c => `
+        <div class="card">
+          <div class="card-header">
+            <strong>${esc(c.produit)}</strong>
+            <span class="badge ${c.statut === 'en_attente' ? 'badge-wait' : 'badge-done'}">${esc(c.statut)}</span>
+          </div>
+          <div style="font-size:0.85rem;color:var(--muted)">
+            ${c.pharmacies?.nom ? esc(c.pharmacies.nom) + ' · ' : ''}
+            ${c.ordonnance_id ? 'Ordonnance #' + c.ordonnance_id : ''}
+            ${c.montant ? ' · ' + c.montant + ' €' : ''}
+          </div>
+        </div>`).join('') : '<div class="empty">Aucune commande</div>';
+    }
+
+    async function orderDrug(ordonnanceId, ligneId, medicament) {
+      const q = String(medicament || '').trim();
+      if (!q) return;
+      const {data: products, error} = await sb.from('produits_pharmacie').select('id,nom,prix,quantite,pharmacie_id').ilike('nom', '%' + q + '%').gt('quantite', 0).limit(20);
+      if (error || !products?.length) return alert('Aucun stock disponible pour ' + q + '.');
+      const x = products[0];
+      const r = await sb.from('commandes_pharmacie').insert({
+        ligne_id: ligneId,
+        ordonnance_id: ordonnanceId,
+        patient_id: patient.id,
+        pharmacie_id: x.pharmacie_id,
+        produit: x.nom,
+        montant: x.prix,
+        mode_paiement: 'Espèces',
+        statut: 'en_attente'
+      }).select().single();
+      if (r.error) return alert(r.error.message);
+      alert('Commande créée. Rendez-vous à la pharmacie pour le paiement en espèces.');
+      refresh();
+    }
+
+    $('book').onclick = async () => {
+      const h = hosp.find(x => x.id == $('h').value);
+      if (!h) return alert('Aucun hôpital disponible.');
+      const r = await sb.from('rendez_vous').insert({
+        patient_id: patient.id,
+        hopital_id: h.id,
+        specialite: $('s').value,
+        symptomes: $('x').value || $('s').value,
+        montant: h.prix_consultation,
+        mode_paiement: 'Espèces'
+      }).select().single();
+      if (r.error) alert(r.error.message);
+      else {
+        alert('Rendez-vous créé');
+        refresh();
+      }
+    };
+
+    load();
+  </script>
+</body>
+</html>
