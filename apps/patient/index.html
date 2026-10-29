@@ -284,7 +284,15 @@
     const sb = OM.sb;
     let user, patient, hosp = [], ords = [], cmds = [];
     const $ = id => document.getElementById(id);
-    const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&','<':'<','>':'>'}[c]));
+
+    // Correct HTML escape (protects against XSS and display issues)
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&',
+      '<': '<',
+      '>': '>',
+      '"': '"',
+      "'": '&#39;'
+    }[c]));
 
     async function load() {
       user = await OM.user();
