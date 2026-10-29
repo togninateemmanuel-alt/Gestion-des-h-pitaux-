@@ -222,7 +222,16 @@
   <script>
     const sb = OM.sb;
     const $ = id => document.getElementById(id);
-    const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&','<':'<','>':'>'}[c]));
+
+    // Correct HTML escape (protects against XSS and display issues)
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&',
+      '<': '<',
+      '>': '>',
+      '"': '"',
+      "'": '&#39;'
+    }[c]));
+
     let me, ph, allStock = [];
 
     async function load() {
