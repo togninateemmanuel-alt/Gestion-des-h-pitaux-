@@ -1,0 +1,10 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": true,
+  "rewrites": [
+    { "source": "/patient", "destination": "/apps/patient/" },
+    { "source": "/hopital", "destination": "/apps/hopital/" },
+    { "source": "/pharmacie", "destination": "/apps/pharmacie/" },
+    { "source": "/admin", "destination": "/apps/admin/" }
+  ]
+}
