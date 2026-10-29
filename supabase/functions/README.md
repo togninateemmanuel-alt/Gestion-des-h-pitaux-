@@ -1,20 +1,9 @@
-# Supabase Edge Functions
+# Edge Functions
+
+Fonctions serveur Supabase du projet. Les clés de fournisseurs externes restent des secrets côté serveur.
 
 ## `admin-ai-insights`
 
-Fonction sécurisée appelée par le Dashboard Admin.
+Analyse des agrégats administratifs après contrôle du rôle `admin`/`superadmin`. Elle utilise l’API Responses côté serveur quand `OPENAI_API_KEY` est configurée.
 
-Flux :
-
-`Admin authentifié → vérification du rôle → agrégats Supabase → IA → insights/alertes`
-
-La clé `OPENAI_API_KEY` est uniquement un secret serveur. Elle ne doit jamais être placée dans `apps/admin` ni dans une variable publique du navigateur.
-
-Secrets attendus :
-
-- `OPENAI_API_KEY` : clé API OpenAI
-- `OPENAI_MODEL` : modèle à utiliser, facultatif (valeur par défaut du code)
-
-La fonction utilise le JWT de l'Admin pour l'authentification, puis le service role Supabase uniquement côté serveur après vérification du rôle. Les données envoyées au modèle sont des agrégats administratifs, pas les dossiers médicaux individuels.
-
-OpenAI est appelé via la Responses API. Les nouvelles intégrations doivent utiliser Responses API plutôt que l'ancienne Assistants API.
+Secrets attendus : `OPENAI_API_KEY` et, facultativement, `OPENAI_MODEL`.
