@@ -175,6 +175,16 @@
   <script>
     const sb = OM.sb;
     const $ = id => document.getElementById(id);
+
+    // Correct HTML escape (protects against XSS and display issues)
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&',
+      '<': '<',
+      '>': '>',
+      '"': '"',
+      "'": '&#39;'
+    }[c]));
+
     const names = {
       patients: 'Patients',
       hopitaux: 'Hôpitaux',
@@ -195,8 +205,8 @@
         ? '<span class="muted">Données indisponibles.</span>'
         : (r.data || []).map(x => `
             <div class="item">
-              <strong>${x.nom || x.name || x.etablissement || 'Demande'}</strong>
-              <span class="muted">Statut : ${x.statut || x.status || 'à vérifier'}</span>
+              <strong>${esc(x.nom || x.name || x.etablissement || 'Demande')}</strong>
+              <span class="muted">Statut : ${esc(x.statut || x.status || 'à vérifier')}</span>
             </div>`).join('') || 'Aucune demande.';
     }
 
@@ -214,7 +224,7 @@
       const m = Object.fromEntries(e);
       $('stats').innerHTML = Object.entries(names).map(([k, v]) => `
         <div class="kpi">
-          <div class="kpi-label">${v}</div>
+          <div class="kpi-label">${esc(v)}</div>
           <div class="kpi-value">${m[k] ?? '—'}</div>
         </div>`).join('');
 
@@ -228,7 +238,7 @@
       const r = await sb.from('rendez_vous').select('id,statut,created_at').order('created_at', {ascending: false}).limit(6);
       $('activity').innerHTML = r.error
         ? 'Données indisponibles.'
-        : (r.data || []).map(x => `<div class="item">Rendez-vous #${x.id} — <span class="badge">${x.statut || 'non renseigné'}</span></div>`).join('') || 'Aucune activité.';
+        : (r.data || []).map(x => `<div class="item">Rendez-vous #${x.id} — <span class="badge">${esc(x.statut || 'non renseigné')}</span></div>`).join('') || 'Aucune activité.';
     }
 
     async function runAI() {
@@ -239,9 +249,9 @@
       if (r.error) { box.textContent = 'Erreur IA : ' + r.error.message; return; }
       if (!r.data.ai_enabled) { box.textContent = r.data.message; return; }
       const i = r.data.insights || {};
-      box.innerHTML = `<p><strong>Synthèse :</strong> ${i.summary || 'Aucune synthèse.'}</p>` +
-        (Array.isArray(i.alerts) ? i.alerts.map(a => `<div class="item"><strong>${a.title}</strong> — ${a.detail || ''}</div>`).join('') : '') +
-        (Array.isArray(i.recommendations) ? '<ul style="margin-top:8px;padding-left:18px">' + i.recommendations.map(x => `<li>${x}</li>`).join('') + '</ul>' : '');
+      box.innerHTML = `<p><strong>Synthèse :</strong> ${esc(i.summary || 'Aucune synthèse.')}</p>` +
+        (Array.isArray(i.alerts) ? i.alerts.map(a => `<div class="item"><strong>${esc(a.title)}</strong> — ${esc(a.detail || '')}</div>`).join('') : '') +
+        (Array.isArray(i.recommendations) ? '<ul style="margin-top:8px;padding-left:18px">' + i.recommendations.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' : '');
     }
 
     $('runAi').onclick = runAI;
