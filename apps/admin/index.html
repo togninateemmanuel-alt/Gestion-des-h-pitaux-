@@ -1,2 +1,251 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ordonnance Mobile Admin</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../../shared/om-core.js"></script><style>body{font-family:system-ui;margin:0;background:#f5f7fb;color:#172033}header{background:#14213d;color:#fff;padding:22px}main{max-width:1200px;margin:auto;padding:24px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}.card{background:#fff;border:1px solid #e4e8f0;border-radius:14px;padding:18px;margin-bottom:14px}.num{font-size:30px;font-weight:800}.muted{color:#667085}.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:700px){.split{grid-template-columns:1fr}}button{padding:10px 14px;border:0;border-radius:9px;background:#14213d;color:white}.item{padding:10px 0;border-bottom:1px solid #eee}</style></head><body><header><h1>Dashboard Admin</h1><div id="state">Chargement…</div></header><main><section class="grid" id="stats"></section><section class="split"><div class="card"><h2>Demandes Hôpital</h2><div id="hRequests" class="muted">Chargement…</div></div><div class="card"><h2>Demandes Pharmacie</h2><div id="phRequests" class="muted">Chargement…</div></div></section><section class="split"><div class="card"><h2>Alertes</h2><div id="alerts">Chargement…</div></div><div class="card"><h2>Analyse IA</h2><p class="muted">L’IA analyse des agrégats administratifs, pas les dossiers individuels.</p><button id="runAi">Lancer l’analyse IA</button><div id="ai"></div></div></section><div class="card"><h2>Activité récente</h2><div id="activity" class="muted">Chargement…</div></div></main><script>
-const sb=OM.sb,$=id=>document.getElementById(id);const names={hopitaux:'Hôpitaux',pharmacies:'Pharmacies',patients:'Patients',rendez_vous:'Rendez-vous',ordonnances:'Ordonnances',commandes_pharmacie:'Commandes pharmacie'};async function count(t){const r=await sb.from(t).select('id',{count:'exact',head:true});return r.error?null:r.count||0}async function list(t,id){const r=await sb.from(t).select('*').order('created_at',{ascending:false}).limit(8);$(id).innerHTML=r.error?'<span class="muted">Données indisponibles.</span>':(r.data||[]).map(x=>'<div class="item"><strong>'+(x.nom||x.name||x.etablissement||'Demande')+'</strong><br><span class="muted">Statut : '+(x.statut||x.status||'à vérifier')+'</span></div>').join('')||'Aucune demande.'}async function run(){const u=await OM.user();if(!u){$('state').textContent='Non connecté';return}const p=await sb.from('profiles').select('role').eq('id',u.id).single();if(p.error||!p.data||!['admin','superadmin'].includes(p.data.role)){$('state').textContent='Accès administrateur requis';return}$('state').textContent='Administration active';const e=await Promise.all(Object.keys(names).map(async t=>[t,await count(t)]));const m=Object.fromEntries(e);$('stats').innerHTML=Object.entries(names).map(([k,v])=>'<div class="card"><div class="muted">'+v+'</div><div class="num">'+(m[k]??'—')+'</div></div>').join('');$('alerts').innerHTML='<div class="item">'+m.rendez_vous+' rendez-vous enregistrés.</div><div class="item">'+m.ordonnances+' ordonnances enregistrées.</div><div class="item">'+m.commandes_pharmacie+' commandes pharmacie.</div>';await Promise.all([list('hopitaux','hRequests'),list('pharmacies','phRequests')]);const r=await sb.from('rendez_vous').select('id,statut,created_at').order('created_at',{ascending:false}).limit(6);$('activity').innerHTML=r.error?'Données indisponibles.':(r.data||[]).map(x=>'<div class="item">Rendez-vous '+x.id+' — '+(x.statut||'état non renseigné')+'</div>').join('')||'Aucune activité.'}async function runAI(){$('ai').textContent='Analyse en cours…';const r=await sb.functions.invoke('admin-ai-insights',{body:{}});if(r.error){$('ai').textContent='Erreur IA : '+r.error.message;return}if(!r.data.ai_enabled){$('ai').textContent=r.data.message;return}const i=r.data.insights||{};$('ai').innerHTML='<p><strong>Synthèse :</strong> '+(i.summary||'Aucune synthèse.')+'</p>'+(Array.isArray(i.alerts)?i.alerts.map(a=>'<div class="item"><strong>'+a.title+'</strong> — '+(a.detail||'')+'</div>').join(''):'')+(Array.isArray(i.recommendations)?'<ul>'+i.recommendations.map(x=>'<li>'+x+'</li>').join('')+'</ul>':'')}$('runAi').onclick=runAI;run();</script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ordonnance Mobile — Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../shared/om-core.js"></script>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 16px;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .status { font-size: 0.85rem; opacity: 0.85; }
+    main { max-width: 1200px; margin: 0 auto; padding: 28px 20px 40px; }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .kpi {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .kpi-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+    .kpi-value { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 650;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .item:last-child { border-bottom: none; }
+    .item strong { display: block; margin-bottom: 2px; }
+    .muted { color: var(--muted); font-size: 0.85rem; }
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .ai-box {
+      margin-top: 14px;
+      padding: 14px;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">+</div>
+      <span>Ordonnance Mobile — Admin</span>
+    </div>
+    <div class="status" id="state">Chargement…</div>
+  </header>
+
+  <main>
+    <section class="kpi-grid" id="stats"></section>
+
+    <section class="split">
+      <div class="card">
+        <h2>Demandes Hôpital</h2>
+        <div id="hRequests" class="muted">Chargement…</div>
+      </div>
+      <div class="card">
+        <h2>Demandes Pharmacie</h2>
+        <div id="phRequests" class="muted">Chargement…</div>
+      </div>
+    </section>
+
+    <section class="split">
+      <div class="card">
+        <h2>Alertes</h2>
+        <div id="alerts">Chargement…</div>
+      </div>
+      <div class="card">
+        <h2>Analyse IA</h2>
+        <p class="muted" style="margin-bottom:12px">L’IA analyse des agrégats administratifs uniquement.</p>
+        <button class="btn" id="runAi">Lancer l’analyse IA</button>
+        <div id="ai" class="ai-box" style="display:none"></div>
+      </div>
+    </section>
+
+    <div class="card">
+      <h2>Activité récente</h2>
+      <div id="activity" class="muted">Chargement…</div>
+    </div>
+  </main>
+
+  <script>
+    const sb = OM.sb;
+    const $ = id => document.getElementById(id);
+    const names = {
+      patients: 'Patients',
+      hopitaux: 'Hôpitaux',
+      pharmacies: 'Pharmacies',
+      rendez_vous: 'Rendez-vous',
+      ordonnances: 'Ordonnances',
+      commandes_pharmacie: 'Commandes'
+    };
+
+    async function count(t) {
+      const r = await sb.from(t).select('id', {count: 'exact', head: true});
+      return r.error ? null : r.count || 0;
+    }
+
+    async function list(t, id) {
+      const r = await sb.from(t).select('*').order('created_at', {ascending: false}).limit(6);
+      $(id).innerHTML = r.error
+        ? '<span class="muted">Données indisponibles.</span>'
+        : (r.data || []).map(x => `
+            <div class="item">
+              <strong>${x.nom || x.name || x.etablissement || 'Demande'}</strong>
+              <span class="muted">Statut : ${x.statut || x.status || 'à vérifier'}</span>
+            </div>`).join('') || 'Aucune demande.';
+    }
+
+    async function run() {
+      const u = await OM.user();
+      if (!u) { $('state').textContent = 'Non connecté'; return; }
+      const p = await sb.from('profiles').select('role').eq('id', u.id).single();
+      if (p.error || !p.data || !['admin', 'superadmin'].includes(p.data.role)) {
+        $('state').textContent = 'Accès administrateur requis';
+        return;
+      }
+      $('state').textContent = 'Administration active';
+
+      const e = await Promise.all(Object.keys(names).map(async t => [t, await count(t)]));
+      const m = Object.fromEntries(e);
+      $('stats').innerHTML = Object.entries(names).map(([k, v]) => `
+        <div class="kpi">
+          <div class="kpi-label">${v}</div>
+          <div class="kpi-value">${m[k] ?? '—'}</div>
+        </div>`).join('');
+
+      $('alerts').innerHTML = `
+        <div class="item">${m.rendez_vous ?? 0} rendez-vous enregistrés</div>
+        <div class="item">${m.ordonnances ?? 0} ordonnances créées</div>
+        <div class="item">${m.commandes_pharmacie ?? 0} commandes pharmacie</div>`;
+
+      await Promise.all([list('hopitaux', 'hRequests'), list('pharmacies', 'phRequests')]);
+
+      const r = await sb.from('rendez_vous').select('id,statut,created_at').order('created_at', {ascending: false}).limit(6);
+      $('activity').innerHTML = r.error
+        ? 'Données indisponibles.'
+        : (r.data || []).map(x => `<div class="item">Rendez-vous #${x.id} — <span class="badge">${x.statut || 'non renseigné'}</span></div>`).join('') || 'Aucune activité.';
+    }
+
+    async function runAI() {
+      const box = $('ai');
+      box.style.display = 'block';
+      box.textContent = 'Analyse en cours…';
+      const r = await sb.functions.invoke('admin-ai-insights', {body: {}});
+      if (r.error) { box.textContent = 'Erreur IA : ' + r.error.message; return; }
+      if (!r.data.ai_enabled) { box.textContent = r.data.message; return; }
+      const i = r.data.insights || {};
+      box.innerHTML = `<p><strong>Synthèse :</strong> ${i.summary || 'Aucune synthèse.'}</p>` +
+        (Array.isArray(i.alerts) ? i.alerts.map(a => `<div class="item"><strong>${a.title}</strong> — ${a.detail || ''}</div>`).join('') : '') +
+        (Array.isArray(i.recommendations) ? '<ul style="margin-top:8px;padding-left:18px">' + i.recommendations.map(x => `<li>${x}</li>`).join('') + '</ul>' : '');
+    }
+
+    $('runAi').onclick = runAI;
+    run();
+  </script>
+</body>
+</html>
