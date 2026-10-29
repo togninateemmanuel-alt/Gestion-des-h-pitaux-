@@ -1,0 +1,53 @@
+name: Ordonnance Mobile smoke test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify application entrypoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s index.html
+          for app in patient hopital pharmacie admin; do
+            test -s "apps/$app/index.html"
+          done
+          test -s shared/om-core.js
+          test -s shared/om-contracts.js
+
+      - name: Verify Supabase integration files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s supabase/migrations/20261029_cross_app.sql
+          test -s supabase/migrations/20261029_admin_dashboard.sql
+          test -s supabase/migrations/20261029_admin_dashboard_rls_fix.sql
+          test -s supabase/functions/admin-ai-insights/index.ts
+
+      - name: Block service-role keys in browser code
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE 'service_role|SUPABASE_SERVICE_ROLE_KEY' apps shared index.html; then
+            echo 'Forbidden service-role credential detected in browser-facing code.'
+            exit 1
+          fi
+
+      - name: Check core references
+        shell: bash
+        run: |
+          set -euo pipefail
+          for app in patient hopital pharmacie admin; do
+            grep -q '../../shared/om-core.js' "apps/$app/index.html"
+          done
+          grep -q 'ordonnance_id' supabase/migrations/20261029_cross_app.sql
