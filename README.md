@@ -1,7 +1,12 @@
-# Gestion des hôpitaux
+# Gestion des hôpitaux / Ordonnance Mobile
 
-Dépôt principal du projet Ordonnance Mobile.
+Plateforme multi-interface basée sur un backend Supabase commun.
 
-Les quatre applications préparées sont intégrées à ce dépôt : Patient, Hôpital, Pharmacie et Admin.
+- `apps/patient/` — parcours patient
+- `apps/hopital/` — accueil, constantes, consultation, ordonnance
+- `apps/pharmacie/` — commandes, délivrance, stock
+- `apps/admin/` — supervision
+- `shared/` — couche d'intégration commune
+- `supabase/migrations/` — évolution du schéma partagé
 
-Les archives sources originales sont conservées dans `packages/` et les applications seront organisées dans des répertoires dédiés.
+Voir `ARCHITECTURE.md` pour le flux interconnecté.
