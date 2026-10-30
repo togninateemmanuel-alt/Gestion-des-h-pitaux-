@@ -1,744 +1,253 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#07090a">
-  <title>CareLink — Patient</title>
-  <style>
-    :root {
-      --bg: #060809;
-      --card: #111617;
-      --card2: #171c1e;
-      --line: #293033;
-      --text: #f4f5f3;
-      --muted: #9aa5a8;
-      --white: #f5f5ef;
-      --yellow: #f4c95d;
-      --green: #22c55e;
-      --blue: #3b82f6;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      margin: 0;
-      background: #050607;
-      color: var(--text);
-      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
-    }
-    button, input, select, textarea { font: inherit; }
-    button { cursor: pointer; }
-    .app {
-      width: min(100%, 430px);
-      min-height: 100dvh;
-      margin: auto;
-      padding: 18px 18px 96px;
-      background: radial-gradient(circle at 50% -10%, #1b2225 0, #07090a 42%);
-    }
-    .screen { display: none; }
-    .screen.active { display: block; }
-    .center {
-      min-height: calc(100dvh - 36px);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      text-align: center;
-    }
-    .logo {
-      width: 76px; height: 76px;
-      border-radius: 25px;
-      background: var(--white);
-      color: #111;
-      display: grid;
-      place-items: center;
-      margin: 0 auto 20px;
-    }
-    .title { font-size: 26px; line-height: 1.1; letter-spacing: -0.04em; margin: 0 0 10px; }
-    .sub { color: var(--muted); font-size: 14px; line-height: 1.45; }
-    .brand { font-weight: 850; }
-    .stack { display: grid; gap: 10px; }
-    .primary, .secondary, .ghost {
-      width: 100%;
-      border-radius: 15px;
-      padding: 14px 16px;
-      font-weight: 800;
-    }
-    .primary { border: 0; background: var(--white); color: #111; }
-    .secondary { border: 1px solid var(--line); background: transparent; color: var(--text); }
-    .ghost { border: 0; background: none; color: var(--muted); }
-    .top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 4px 0 18px;
-    }
-    .icon {
-      width: 42px; height: 42px;
-      border: 1px solid var(--line);
-      background: #ffffff08;
-      color: var(--text);
-      border-radius: 14px;
-      display: grid;
-      place-items: center;
-    }
-    .field {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--card2);
-      border: 1px solid var(--line);
-      border-radius: 15px;
-      padding: 12px 14px;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-    .field input, .field select, .field textarea {
-      border: 0;
-      outline: 0;
-      background: transparent;
-      color: var(--text);
-      width: 100%;
-      min-width: 0;
-    }
-    .field textarea { min-height: 80px; resize: vertical; }
-    .error { color: #ff7474; font-size: 12px; min-height: 15px; }
-    .eyebrow { color: var(--muted); font-size: 12px; }
-    .location {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 17px;
-      padding: 13px;
-      margin: 18px 0;
-    }
-    .locpin {
-      width: 38px; height: 38px;
-      border-radius: 12px;
-      background: #1b2224;
-      display: grid;
-      place-items: center;
-    }
-    .section-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin: 21px 0 11px;
-    }
-    .section-head h2 { font-size: 16px; margin: 0; }
-    .section-head button { border: 0; background: none; color: var(--muted); font-size: 12px; }
-    .hospital, .card, .order-card, .pharma-card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 14px;
-      margin-bottom: 12px;
-    }
-    .hospital img, .pharma-card img {
-      width: 100%;
-      height: 110px;
-      object-fit: cover;
-      border-radius: 13px;
-      background: #171d1f;
-      margin-bottom: 10px;
-    }
-    .hname, .card-title { font-size: 15px; font-weight: 800; }
-    .rating { font-size: 12px; color: var(--yellow); }
-    .meta { display: flex; gap: 11px; flex-wrap: wrap; color: var(--muted); font-size: 11px; margin-top: 7px; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
-    .small {
-      border: 1px solid var(--line);
-      background: #181d1f;
-      color: var(--text);
-      border-radius: 12px;
-      padding: 10px 7px;
-      font-size: 11px;
-      font-weight: 800;
-    }
-    .small.primary-small { background: var(--white); color: #111; border-color: var(--white); }
-    .notice {
-      padding: 13px;
-      border: 1px solid #343b3d;
-      background: #111719;
-      border-radius: 15px;
-      color: #c9d0d2;
-      font-size: 12px;
-      line-height: 1.45;
-    }
-    .badge {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 999px;
-    }
-    .badge-wait { background: #422006; color: #fbbf24; }
-    .badge-ok { background: #14532d; color: #4ade80; }
-    .badge-info { background: #1e3a5f; color: #93c5fd; }
-    .success-box {
-      text-align: center;
-      padding: 40px 20px;
-    }
-    .success-icon {
-      width: 72px; height: 72px;
-      border-radius: 50%;
-      background: #14532d;
-      color: #4ade80;
-      display: grid;
-      place-items: center;
-      font-size: 32px;
-      margin: 0 auto 20px;
-    }
-    .timeline { position: relative; padding-left: 24px; }
-    .timeline::before {
-      content: '';
-      position: absolute;
-      left: 7px; top: 8px; bottom: 8px;
-      width: 2px;
-      background: var(--line);
-    }
-    .tl-item { position: relative; margin-bottom: 18px; }
-    .tl-item::before {
-      content: '';
-      position: absolute;
-      left: -20px; top: 4px;
-      width: 12px; height: 12px;
-      border-radius: 50%;
-      background: var(--green);
-      border: 2px solid var(--bg);
-    }
-    .tl-item.pending::before { background: var(--muted); }
-    .bottom {
-      display: none;
-      position: fixed;
-      z-index: 50;
-      left: 50%;
-      bottom: 0;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 430px;
-      height: 78px;
-      padding: 8px 7px calc(8px + env(safe-area-inset-bottom));
-      background: #080a0bed;
-      backdrop-filter: blur(18px);
-      border-top: 1px solid var(--line);
-      grid-template-columns: repeat(5, 1fr);
-    }
-    .bottom.visible { display: grid; }
-    .nav {
-      border: 0;
-      background: none;
-      color: #7e898d;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      font-size: 10px;
-      font-weight: 800;
-    }
-    .nav.active { color: var(--white); }
-    .spinner {
-      width: 22px; height: 22px;
-      border: 2px solid #394143;
-      border-top-color: var(--white);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      margin: 0 auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-    .tab {
-      flex: 1;
-      padding: 10px;
-      border-radius: 12px;
-      border: 1px solid var(--line);
-      background: transparent;
-      color: var(--muted);
-      font-weight: 700;
-      font-size: 13px;
-    }
-    .tab.active { background: var(--white); color: #111; border-color: var(--white); }
-    .product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .product {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-    }
-    .product-img {
-      height: 70px;
-      background: #1a2224;
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      font-size: 28px;
-      margin-bottom: 8px;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#060809">
+<title>Ordonnance Mobile — Patient</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css">
+<style>
+:root{--bg:#060809;--card:#111617;--card2:#171c1e;--line:#293033;--text:#f4f5f3;--muted:#9aa5a8;--white:#f5f5ef;--yellow:#f4c95d;--green:#22c55e;--blue:#60a5fa;--danger:#fb7185}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#050607;color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{min-height:100dvh}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.app{width:min(100%,430px);min-height:100dvh;margin:auto;padding:18px 18px 98px;background:radial-gradient(circle at 50% -10%,#1b2225 0,#07090a 42%)}
+.screen{display:none}.screen.active{display:block}
+.center{min-height:calc(100dvh - 36px);display:flex;flex-direction:column;justify-content:center;text-align:center}
+.brand{font-weight:900}.title{font-size:26px;line-height:1.1;letter-spacing:-.04em;margin:0 0 10px}.sub{color:var(--muted);font-size:14px;line-height:1.5}
+.logo{width:78px;height:78px;border-radius:24px;background:var(--white);color:#111;display:grid;place-items:center;margin:0 auto 20px;font-size:34px}
+.stack{display:grid;gap:10px}.primary,.secondary,.ghost{width:100%;border-radius:15px;padding:14px 16px;font-weight:850}.primary{border:0;background:var(--white);color:#111}.secondary{border:1px solid var(--line);background:transparent;color:var(--text)}.ghost{border:0;background:none;color:var(--muted)}
+.top{display:flex;align-items:center;justify-content:space-between;padding:4px 0 18px}.icon-btn{width:44px;height:44px;border:1px solid var(--line);background:#ffffff08;color:var(--text);border-radius:14px;display:grid;place-items:center}
+.field{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:15px;padding:12px 14px;color:var(--muted);margin-bottom:10px}.field input,.field select,.field textarea{border:0;outline:0;background:transparent;color:var(--text);width:100%;min-width:0}.field textarea{min-height:100px;resize:vertical}
+.error{color:#ff7474;font-size:12px;min-height:15px}.eyebrow{color:var(--muted);font-size:12px}
+.location,.feature,.hospital,.card,.order-card,.pharma-card,.product{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.location{display:flex;align-items:center;gap:12px;margin:18px 0}.locpin,.feature-icon{width:42px;height:42px;border-radius:13px;background:#1b2224;display:grid;place-items:center;color:var(--white);font-size:18px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:21px 0 11px}.section-head h2{font-size:16px}.section-head button{border:0;background:none;color:var(--muted);font-size:12px}
+.hospital img,.pharma-card img{width:100%;height:110px;object-fit:cover;border-radius:13px;background:#171d1f;margin-bottom:10px}.hname,.card-title{font-size:15px;font-weight:850}.rating{font-size:12px;color:var(--yellow)}.meta{display:flex;gap:11px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin-top:7px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}.small{border:1px solid var(--line);background:#181d1f;color:var(--text);border-radius:12px;padding:10px 7px;font-size:11px;font-weight:800}.small.primary-small{background:var(--white);color:#111;border-color:var(--white)}
+.notice{padding:13px;border:1px solid #343b3d;background:#111719;border-radius:15px;color:#c9d0d2;font-size:12px;line-height:1.5}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:750;padding:5px 10px;border-radius:999px}.badge-wait{background:#422006;color:#fbbf24}.badge-ok{background:#14532d;color:#4ade80}.badge-info{background:#1e3a5f;color:#93c5fd}
+.success-box{text-align:center;padding:40px 20px}.success-icon{width:72px;height:72px;border-radius:50%;background:#14532d;color:#4ade80;display:grid;place-items:center;font-size:30px;margin:0 auto 20px}
+.timeline{position:relative;padding-left:24px}.timeline:before{content:"";position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:var(--line)}.tl-item{position:relative;margin-bottom:18px}.tl-item:before{content:"";position:absolute;left:-20px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--green);border:2px solid var(--bg)}.tl-item.pending:before{background:var(--muted)}
+.bottom{display:none;position:fixed;z-index:50;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:430px;height:82px;padding:7px 6px calc(7px + env(safe-area-inset-bottom));background:#080a0bed;backdrop-filter:blur(18px);border-top:1px solid var(--line);grid-template-columns:repeat(5,1fr)}
+.bottom.visible{display:grid}.nav{border:0;background:none;color:#7e898d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:10px;font-weight:800}.nav i{font-size:25px;line-height:1}.nav.active{color:var(--white)}
+.tabs{display:flex;gap:8px;margin-bottom:16px}.tab{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--muted);font-weight:750;font-size:12px}.tab.active{background:var(--white);color:#111;border-color:var(--white)}
+.product-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.product{margin:0}.product-img{height:74px;background:#1a2224;border-radius:10px;display:grid;place-items:center;font-size:28px;margin-bottom:8px;color:var(--muted)}
+.feature{display:flex;gap:12px;align-items:center}.feature-copy{flex:1}.feature-copy strong{display:block;margin-bottom:4px}.feature-copy small{color:var(--muted);line-height:1.35}
+.hero-action{border:1px solid #343b3d;background:linear-gradient(145deg,#171d1f,#0e1213);border-radius:20px;padding:16px;margin:18px 0}.hero-action .fa-stethoscope{font-size:24px}.hero-action h2{font-size:18px;margin:9px 0 6px}.hero-action p{color:var(--muted);font-size:12px;line-height:1.45;margin-bottom:12px}
+.spinner{width:22px;height:22px;border:2px solid #394143;border-top-color:var(--white);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none!important}.muted{color:var(--muted)}
+.map-box{height:52vh;background:radial-gradient(circle at 30% 35%,#263437,#111719 48%,#0b0e0f);border-radius:20px;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);text-align:center;padding:20px}
+.profile-grid{display:grid;gap:10px}.profile-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;text-align:left}.profile-item i{width:28px;text-align:center;font-size:19px}.profile-item span{flex:1}.profile-item small{display:block;color:var(--muted);margin-top:4px}
+@media(max-width:360px){.app{padding-left:14px;padding-right:14px}.nav i{font-size:22px}}
+</style>
 </head>
 <body>
 <main class="app">
 
-  <!-- 1. Splash -->
-  <section id="splash" class="screen active">
-    <div class="center">
-      <div class="logo">❤</div>
-      <h1 class="title">CareLink</h1>
-      <p class="sub">Votre santé, notre priorité</p>
-      <div style="margin-top:26px"><div class="spinner"></div></div>
-    </div>
-  </section>
+<section id="splash" class="screen active">
+  <div class="center">
+    <div class="logo"><i class="fa-solid fa-heart-pulse"></i></div>
+    <h1 class="title">Ordonnance Mobile</h1>
+    <p class="sub">Votre santé, notre priorité</p>
+    <div style="margin-top:26px"><div class="spinner"></div></div>
+  </div>
+</section>
 
-  <!-- 2. Auth -->
-  <section id="auth" class="screen">
-    <div class="center">
-      <div class="brand">CareLink</div>
-      <div style="width:120px;height:120px;margin:24px auto;border-radius:30px;background:var(--card);display:grid;place-items:center;font-size:48px">📱</div>
-      <h1 class="title">Bienvenue !</h1>
-      <p class="sub">Accédez à vos soins facilement,<br>où que vous soyez.</p>
-      <div class="stack" style="margin-top:25px">
-        <button class="primary" onclick="show('login')">Se connecter</button>
-        <button class="secondary" onclick="show('signup')">Créer un compte</button>
-        <button class="ghost" onclick="enterDemo()">Continuer sans compte</button>
-      </div>
+<section id="auth" class="screen">
+  <div class="center">
+    <div class="brand">Ordonnance Mobile</div>
+    <div class="logo" style="margin-top:26px;margin-bottom:22px"><i class="fa-solid fa-heart-pulse"></i></div>
+    <h1 class="title">Bienvenue</h1><p class="sub">Accédez à vos soins facilement, où que vous soyez.</p>
+    <div class="stack" style="margin-top:25px">
+      <button class="primary" onclick="show('login')">Se connecter</button>
+      <button class="secondary" onclick="show('signup')">Créer un compte</button>
+      <button class="ghost" onclick="enterDemo()">Continuer sans compte</button>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Login -->
-  <section id="login" class="screen">
-    <div class="top"><button class="icon" onclick="show('auth')">←</button><b>Connexion</b><span></span></div>
-    <h1 class="title">Ravi de vous revoir.</h1>
-    <p class="sub">Connectez-vous pour accéder à votre parcours de soins.</p>
-    <div class="stack" style="margin-top:24px">
-      <div class="field"><span>✉</span><input id="le" type="email" placeholder="Adresse e-mail"></div>
-      <div class="field"><span>🔒</span><input id="lp" type="password" placeholder="Mot de passe"></div>
-      <div id="loginErr" class="error"></div>
-      <button class="primary" onclick="login()">Se connecter</button>
-      <button class="ghost" onclick="show('signup')">Créer un compte</button>
-    </div>
-  </section>
+<section id="login" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('auth')"><i class="fa-solid fa-arrow-left"></i></button><b>Connexion</b><span></span></div>
+  <h1 class="title">Ravi de vous revoir.</h1><p class="sub">Connectez-vous pour accéder à votre parcours de soins.</p>
+  <div class="stack" style="margin-top:24px">
+    <div class="field"><i class="fa-solid fa-envelope"></i><input id="le" type="email" placeholder="Adresse e-mail"></div>
+    <div class="field"><i class="fa-solid fa-lock"></i><input id="lp" type="password" placeholder="Mot de passe"></div>
+    <div id="loginErr" class="error"></div>
+    <button class="primary" onclick="login()">Se connecter</button><button class="ghost" onclick="show('signup')">Créer un compte</button>
+  </div>
+</section>
 
-  <!-- Signup -->
-  <section id="signup" class="screen">
-    <div class="top"><button class="icon" onclick="show('auth')">←</button><b>Créer un compte</b><span></span></div>
-    <h1 class="title">Votre parcours commence ici.</h1>
-    <div class="stack" style="margin-top:24px">
-      <div class="field"><span>👤</span><input id="sf" placeholder="Prénom"></div>
-      <div class="field"><span>👤</span><input id="sl" placeholder="Nom"></div>
-      <div class="field"><span>☎</span><input id="sp" placeholder="Téléphone"></div>
-      <div class="field"><span>✉</span><input id="se" type="email" placeholder="Adresse e-mail"></div>
-      <div class="field"><span>🔒</span><input id="sw" type="password" placeholder="Mot de passe"></div>
-      <div id="signupErr" class="error"></div>
-      <button class="primary" onclick="signup()">Créer mon compte</button>
-    </div>
-  </section>
+<section id="signup" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('auth')"><i class="fa-solid fa-arrow-left"></i></button><b>Créer un compte</b><span></span></div>
+  <h1 class="title">Votre parcours commence ici.</h1>
+  <div class="stack" style="margin-top:24px">
+    <div class="field"><i class="fa-solid fa-user"></i><input id="sf" placeholder="Prénom"></div>
+    <div class="field"><i class="fa-solid fa-user"></i><input id="sl" placeholder="Nom"></div>
+    <div class="field"><i class="fa-solid fa-phone"></i><input id="sp" placeholder="Téléphone"></div>
+    <div class="field"><i class="fa-solid fa-envelope"></i><input id="se" type="email" placeholder="Adresse e-mail"></div>
+    <div class="field"><i class="fa-solid fa-lock"></i><input id="sw" type="password" placeholder="Mot de passe"></div>
+    <div id="signupErr" class="error"></div><button class="primary" onclick="signup()">Créer un compte</button>
+  </div>
+</section>
 
-  <!-- 3. Home -->
-  <section id="home" class="screen">
-    <div class="top">
-      <div><div class="eyebrow">Bonjour 👋</div><div class="brand" id="hello">Patient</div></div>
-      <button class="icon" onclick="show('profile')">👤</button>
-    </div>
-    <h1 class="title">Comment vous sentez-vous aujourd'hui ?</h1>
-    <div class="location" onclick="locate()">
-      <div class="locpin">📍</div>
-      <div><strong id="locTitle">Localisation non activée</strong><small id="locSub" style="color:var(--muted);font-size:11px">Activer pour trouver les hôpitaux proches</small></div>
-      <span style="margin-left:auto">›</span>
-    </div>
-    <div class="field"><span>🔍</span><input id="q" placeholder="Rechercher un hôpital ou une spécialité…" oninput="filter(this.value)"></div>
-    <div class="section-head"><h2>Hôpitaux proches</h2><button onclick="show('hospitals')">Voir tout</button></div>
-    <div id="homeList"><div class="notice">Chargement des hôpitaux…</div></div>
-  </section>
+<section id="home" class="screen">
+  <div class="top"><div><div class="eyebrow">Bonjour</div><div class="brand" id="hello">Patient</div></div><button class="icon-btn" onclick="show('profile')"><i class="fa-solid fa-user"></i></button></div>
+  <h1 class="title">Votre parcours de soins, simplement.</h1>
+  <div class="hero-action">
+    <i class="fa-solid fa-stethoscope"></i><h2>Besoin d'une consultation ?</h2>
+    <p>Choisissez un hôpital et envoyez votre demande. Le médecin analysera votre demande puis fixera lui-même la date et l'heure du rendez-vous.</p>
+    <button class="primary" onclick="show('hospitals')"><i class="fa-solid fa-paper-plane"></i>&nbsp; Demander une consultation</button>
+  </div>
+  <div class="location" onclick="locate()"><div class="locpin"><i class="fa-solid fa-location-dot"></i></div><div><strong id="locTitle">Localisation non activée</strong><small id="locSub" style="display:block;color:var(--muted);font-size:11px;margin-top:3px">Activer pour trouver les hôpitaux proches</small></div><i class="fa-solid fa-chevron-right" style="margin-left:auto"></i></div>
+  <div class="field"><i class="fa-solid fa-magnifying-glass"></i><input id="q" placeholder="Rechercher un hôpital ou une spécialité…" oninput="filter(this.value)"></div>
+  <div class="section-head"><h2>Hôpitaux proches</h2><button onclick="show('hospitals')">Voir tout</button></div>
+  <div id="homeList"><div class="notice">Chargement des hôpitaux…</div></div>
+  <div class="section-head"><h2>Marketplace santé</h2><button onclick="show('pharmacies')">Ouvrir</button></div>
+  <div class="feature" onclick="show('pharmacies')"><div class="feature-icon"><i class="fa-solid fa-store"></i></div><div class="feature-copy"><strong>Pharmacies & produits de santé</strong><small>Recherchez une pharmacie, consultez les stocks et trouvez les produits de votre ordonnance.</small></div><i class="fa-solid fa-chevron-right"></i></div>
+</section>
 
-  <!-- 4. Hospitals list -->
-  <section id="hospitals" class="screen">
-    <div class="top"><button class="icon" onclick="show('home')">←</button><b>Hôpitaux</b><span></span></div>
-    <div class="field"><span>🔍</span><input id="hq" placeholder="Rechercher un hôpital…" oninput="filter(this.value)"></div>
-    <div id="hospitalList"><div class="notice">Chargement…</div></div>
-  </section>
+<section id="hospitals" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('home')"><i class="fa-solid fa-arrow-left"></i></button><b>Hôpitaux</b><button class="icon-btn" onclick="show('map')"><i class="fa-solid fa-map-location-dot"></i></button></div>
+  <div class="field"><i class="fa-solid fa-magnifying-glass"></i><input id="hq" placeholder="Rechercher un hôpital…" oninput="filter(this.value)"></div>
+  <div class="notice" style="margin-bottom:12px"><i class="fa-solid fa-circle-info"></i> Les résultats peuvent être classés selon la proximité, la note et les informations disponibles.</div>
+  <div id="hospitalList"><div class="notice">Chargement…</div></div>
+</section>
 
-  <!-- 5. Map -->
-  <section id="map" class="screen">
-    <div class="top"><button class="icon" onclick="show('hospitals')">←</button><b>Carte des hôpitaux</b><span></span></div>
-    <div style="height:60vh;background:var(--card);border-radius:20px;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted)">
-      Carte (localisation activée)
-    </div>
-    <div id="mapCard" class="card" style="margin-top:12px">Activez la localisation pour afficher les hôpitaux proches.</div>
-  </section>
+<section id="map" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('hospitals')"><i class="fa-solid fa-arrow-left"></i></button><b>Carte & itinéraire</b><span></span></div>
+  <div class="map-box"><div><i class="fa-solid fa-map-location-dot" style="font-size:42px;margin-bottom:12px"></i><br>Carte et itinéraire<br><small>La position réelle sera utilisée lorsque la localisation est autorisée.</small></div></div>
+  <div id="mapCard" class="card" style="margin-top:12px">Activez la localisation pour afficher les établissements proches.</div>
+</section>
 
-  <!-- 6. Hospital detail -->
-  <section id="detail" class="screen"></section>
+<section id="detail" class="screen"></section>
 
-  <!-- 7. Demande de consultation -->
-  <section id="request" class="screen">
-    <div class="top"><button class="icon" onclick="show('detail')">←</button><b>Demande de consultation</b><span></span></div>
-    <div class="card" id="reqHospital"></div>
-    <div class="field"><span>🏥</span>
-      <select id="reqSpecialite">
-        <option value="">Type de consultation</option>
-        <option>Médecine générale</option>
-        <option>Pédiatrie</option>
-        <option>Gynécologie</option>
-        <option>Cardiologie</option>
-        <option>ORL</option>
-      </select>
-    </div>
-    <div class="field"><span>📝</span><textarea id="reqSymptomes" placeholder="Décrivez vos symptômes (ex: Fièvre, maux de tête...)"></textarea></div>
-    <div class="field"><span>📎</span><input type="text" placeholder="Pièces jointes (optionnel)" readonly></div>
-    <button class="primary" onclick="goInsurance()">Suivant</button>
-  </section>
+<section id="request" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('detail')"><i class="fa-solid fa-arrow-left"></i></button><b>Demande de consultation</b><span></span></div>
+  <div class="notice" style="margin-bottom:12px"><i class="fa-solid fa-circle-info"></i> Vous ne choisissez pas l'heure. Après analyse, le médecin fixe la date et l'heure du rendez-vous.</div>
+  <div class="card" id="reqHospital"></div>
+  <div class="field"><i class="fa-solid fa-user-doctor"></i><select id="reqSpecialite"><option value="">Type de consultation</option><option>Médecine générale</option><option>Pédiatrie</option><option>Gynécologie</option><option>Cardiologie</option><option>ORL</option></select></div>
+  <div class="field"><i class="fa-solid fa-notes-medical"></i><textarea id="reqSymptomes" placeholder="Expliquez ce qui vous amène, vos symptômes ou ce qui vous fait mal…"></textarea></div>
+  <button class="primary" onclick="goInsurance()">Continuer <i class="fa-solid fa-arrow-right"></i></button>
+</section>
 
-  <!-- 8. Assurance -->
-  <section id="insurance" class="screen">
-    <div class="top"><button class="icon" onclick="show('request')">←</button><b>Assurance</b><span></span></div>
-    <h2 style="margin-bottom:16px">Êtes-vous assuré ?</h2>
-    <div class="tabs">
-      <button class="tab active" onclick="setInsured(true)">Oui</button>
-      <button class="tab" onclick="setInsured(false)">Non</button>
-    </div>
-    <div id="insuranceForm">
-      <p class="sub" style="margin-bottom:12px">Choisissez votre assurance</p>
-      <div class="stack" style="margin-bottom:16px">
-        <button class="secondary" onclick="selectInsurance('INAM')">INAM</button>
-        <button class="secondary" onclick="selectInsurance('AMU')">AMU</button>
-        <button class="secondary" onclick="selectInsurance('Autre')">Autre</button>
-      </div>
-      <div class="field"><span>#</span><input id="numAssure" placeholder="Numéro d'assuré"></div>
-    </div>
-    <button class="primary" onclick="goInsuranceCard()">Suivant</button>
-  </section>
+<section id="insurance" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('request')"><i class="fa-solid fa-arrow-left"></i></button><b>Assurance</b><span></span></div>
+  <h2 style="margin-bottom:16px">Avez-vous une assurance ?</h2>
+  <div class="tabs"><button class="tab active" onclick="setInsured(true)">Oui</button><button class="tab" onclick="setInsured(false)">Non</button></div>
+  <div id="insuranceForm"><p class="sub" style="margin-bottom:12px">Enregistrez vos informations d'assurance pour les réutiliser.</p><div class="stack"><button class="secondary" onclick="selectInsurance('INAM')"><i class="fa-solid fa-id-card"></i>&nbsp; INAM</button><button class="secondary" onclick="selectInsurance('AMU')"><i class="fa-solid fa-shield-heart"></i>&nbsp; AMU</button><button class="secondary" onclick="selectInsurance('Autre')"><i class="fa-solid fa-building-shield"></i>&nbsp; Autre assurance</button></div><div class="field" style="margin-top:12px"><i class="fa-solid fa-hashtag"></i><input id="numAssure" placeholder="Numéro d'assuré"></div></div>
+  <button class="primary" style="margin-top:8px" onclick="goInsuranceCard()">Continuer <i class="fa-solid fa-arrow-right"></i></button>
+</section>
 
-  <!-- 9. Carte d'assurance -->
-  <section id="insuranceCard" class="screen">
-    <div class="top"><button class="icon" onclick="show('insurance')">←</button><b>Carte d'assurance</b><span></span></div>
-    <div class="card">
-      <div class="hname" id="insName">INAM</div>
-      <div class="meta" style="margin-top:12px">
-        <div>Nom : <span id="insNom">—</span></div>
-        <div>Prénom : <span id="insPrenom">—</span></div>
-        <div>N° assuré : <span id="insNum">—</span></div>
-      </div>
-      <button class="secondary" style="margin-top:16px" onclick="alert('Scanner carte (à venir)')">📷 Scanner ma carte</button>
-    </div>
-    <button class="primary" onclick="submitRequest()">Enregistrer</button>
-  </section>
+<section id="insuranceCard" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('insurance')"><i class="fa-solid fa-arrow-left"></i></button><b>Carte d'assurance</b><span></span></div>
+  <div class="card"><div class="hname" id="insName">INAM</div><div class="meta" style="margin-top:12px"><span>Nom : <b id="insNom">—</b></span><span>Prénom : <b id="insPrenom">—</b></span><span>N° assuré : <b id="insNum">—</b></span></div><button class="secondary" style="margin-top:16px" onclick="alert('Lecture de carte à connecter')"><i class="fa-solid fa-camera"></i>&nbsp; Scanner ma carte</button></div>
+  <div class="notice" style="margin-bottom:12px"><i class="fa-solid fa-shield-halved"></i> Cette étape numérise vos informations ; elle ne remplace pas une validation officielle de l'assureur sans intégration dédiée.</div>
+  <button class="primary" onclick="submitRequest()">Envoyer la demande</button>
+</section>
 
-  <!-- 10. Demande envoyée -->
-  <section id="requestSent" class="screen">
-    <div class="success-box">
-      <div class="success-icon">✓</div>
-      <h1 class="title">Demande envoyée !</h1>
-      <p class="sub">Votre demande de consultation a bien été transmise à l'hôpital.</p>
-      <div class="badge badge-wait" style="margin:16px 0">En attente d'analyse</div>
-      <div class="card" id="sentSummary"></div>
-      <button class="primary" onclick="show('home')">Retour à l'accueil</button>
-      <button class="secondary" style="margin-top:10px" onclick="show('requests')">Voir le détail</button>
-    </div>
-  </section>
+<section id="requestSent" class="screen">
+  <div class="success-box"><div class="success-icon"><i class="fa-solid fa-check"></i></div><h1 class="title">Demande envoyée</h1><p class="sub">Votre demande a été transmise à l'hôpital. Le médecin va l'analyser.</p><div class="badge badge-wait" style="margin:16px 0"><i class="fa-solid fa-hourglass-half"></i> En attente d'analyse</div><div class="card" id="sentSummary" style="text-align:left"></div><button class="primary" onclick="show('requests')">Voir mes demandes</button></div>
+</section>
 
-  <!-- 11. Confirmation RDV -->
-  <section id="rdvConfirm" class="screen">
-    <div class="top"><button class="icon" onclick="show('home')">←</button><b>Notification</b><span></span></div>
-    <div class="success-box">
-      <div class="success-icon" style="background:#1e3a5f;color:#93c5fd">📅</div>
-      <h1 class="title">Rendez-vous confirmé</h1>
-      <p class="sub">Votre consultation a été programmée par le médecin.</p>
-      <div class="card" style="text-align:left;margin-top:20px">
-        <div class="hname">Dr. Koffi Mensah</div>
-        <div class="meta">Médecine générale</div>
-        <div style="margin-top:12px">📅 Mardi 4 novembre 2026 à 10h30</div>
-        <div>📍 CHU Campus</div>
-      </div>
-      <button class="primary" style="margin-top:20px" onclick="show('map')">Voir l'itinéraire</button>
-    </div>
-  </section>
+<section id="rdvConfirm" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('requests')"><i class="fa-solid fa-arrow-left"></i></button><b>Rendez-vous</b><span></span></div>
+  <div class="success-box"><div class="success-icon" style="background:#1e3a5f;color:#93c5fd"><i class="fa-solid fa-calendar-check"></i></div><h1 class="title">Rendez-vous confirmé</h1><p class="sub">Le médecin a analysé votre demande et fixé la date et l'heure.</p><div class="card" style="text-align:left;margin-top:20px"><div class="hname" id="rdvDoctor">Médecin</div><div class="meta" id="rdvSpec">Consultation</div><div style="margin-top:12px"><i class="fa-solid fa-calendar"></i> <span id="rdvDate">Date à venir</span></div><div style="margin-top:8px"><i class="fa-solid fa-location-dot"></i> <span id="rdvPlace">Hôpital</span></div></div><button class="primary" onclick="show('map')">Voir l'itinéraire</button></div>
+</section>
 
-  <!-- 12-14. Carnet de santé -->
-  <section id="carnet" class="screen">
-    <div class="top"><button class="icon" onclick="show('home')">←</button><b>Mon carnet de santé</b><span></span></div>
-    <div class="tabs">
-      <button class="tab active" onclick="switchCarnet('consult')">Consultations</button>
-      <button class="tab" onclick="switchCarnet('ordos')">Ordonnances</button>
-      <button class="tab" onclick="switchCarnet('analyses')">Analyses</button>
-    </div>
-    <div id="carnetContent"></div>
-  </section>
+<section id="requests" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('home')"><i class="fa-solid fa-arrow-left"></i></button><b>Mes demandes</b><span></span></div>
+  <div id="requestsList"><div class="notice">Aucune demande pour le moment.</div></div>
+</section>
 
-  <!-- 15-16. Pharmacies -->
-  <section id="pharmacies" class="screen">
-    <div class="top"><button class="icon" onclick="show('home')">←</button><b>Pharmacies à proximité</b><span></span></div>
-    <div class="field"><span>🔍</span><input placeholder="Rechercher une pharmacie…"></div>
-    <div id="pharmaList">
-      <div class="pharma-card">
-        <div class="hname">Pharmacie Centrale</div>
-        <div class="meta">★ 4.6 · 1,2 km · 5 min · Ouvert</div>
-        <div class="actions">
-          <button class="small" onclick="show('pharmacyShop')">Voir</button>
-          <button class="small primary-small">Itinéraire</button>
-        </div>
-      </div>
-      <div class="pharma-card">
-        <div class="hname">Pharmacie du Marché</div>
-        <div class="meta">★ 4.4 · 2,8 km · 9 min · Ouvert</div>
-        <div class="actions">
-          <button class="small">Voir</button>
-          <button class="small primary-small">Itinéraire</button>
-        </div>
-      </div>
-    </div>
-  </section>
+<section id="profile" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('home')"><i class="fa-solid fa-arrow-left"></i></button><b>Profil</b><span></span></div>
+  <div class="card"><div class="hname" id="profileName">Patient</div><div class="meta" id="profileMeta">Votre espace personnel</div></div>
+  <div class="profile-grid">
+    <button class="profile-item" onclick="show('carnet')"><i class="fa-solid fa-book-medical"></i><span><b>Mon carnet de santé</b><small>Consultations, ordonnances, analyses</small></span><i class="fa-solid fa-chevron-right"></i></button>
+    <button class="profile-item" onclick="show('insurance')"><i class="fa-solid fa-id-card"></i><span><b>Mes assurances</b><small>Informations d'assurance enregistrées</small></span><i class="fa-solid fa-chevron-right"></i></button>
+    <button class="profile-item" onclick="show('pharmacies')"><i class="fa-solid fa-store"></i><span><b>Marketplace santé</b><small>Pharmacies, produits et commandes</small></span><i class="fa-solid fa-chevron-right"></i></button>
+    <button class="profile-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i><span><b>Se déconnecter</b><small>Fermer la session</small></span><i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+</section>
 
-  <!-- 17. Boutique pharmacie -->
-  <section id="pharmacyShop" class="screen">
-    <div class="top"><button class="icon" onclick="show('pharmacies')">←</button><b>Pharmacie Centrale</b><span></span></div>
-    <div class="meta" style="margin-bottom:12px">★ 4.6 · 1,2 km · Ouvert 7h-22h</div>
-    <div class="tabs">
-      <button class="tab active">Tous</button>
-      <button class="tab">Médicaments</button>
-      <button class="tab">Parapharmacie</button>
-    </div>
-    <div class="product-grid">
-      <div class="product">
-        <div class="product-img">💊</div>
-        <div class="hname">Paracétamol 500 mg</div>
-        <div class="meta">1 500 FCFA</div>
-        <button class="small primary-small" style="margin-top:8px;width:100%">+</button>
-      </div>
-      <div class="product">
-        <div class="product-img">💊</div>
-        <div class="hname">Amoxicilline 1 g</div>
-        <div class="meta">2 900 FCFA</div>
-        <button class="small primary-small" style="margin-top:8px;width:100%">+</button>
-      </div>
-    </div>
-    <button class="primary" style="margin-top:20px" onclick="show('orderTrack')">Voir le panier</button>
-  </section>
+<section id="carnet" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('profile')"><i class="fa-solid fa-arrow-left"></i></button><b>Mon carnet de santé</b><span></span></div>
+  <div class="tabs"><button class="tab active" onclick="switchCarnet('consult')">Consultations</button><button class="tab" onclick="switchCarnet('ordos')">Ordonnances</button><button class="tab" onclick="switchCarnet('analyses')">Analyses</button></div>
+  <div id="carnetContent"></div>
+</section>
 
-  <!-- 18. Suivi de commande -->
-  <section id="orderTrack" class="screen">
-    <div class="top"><button class="icon" onclick="show('pharmacies')">←</button><b>Suivi de commande</b><span></span></div>
-    <div class="card">
-      <div class="hname">Commande #1258</div>
-      <div class="meta">10 nov. 2026</div>
-    </div>
-    <div class="timeline" style="margin-top:20px">
-      <div class="tl-item"><strong>Commande reçue</strong><div class="meta">10 nov. 2026 - 14h20</div></div>
-      <div class="tl-item"><strong>Paiement confirmé</strong><div class="meta">10 nov. 2026 - 14h32</div></div>
-      <div class="tl-item"><strong>Préparation</strong><div class="meta">En cours</div></div>
-      <div class="tl-item pending"><strong>Prête</strong><div class="meta">À venir</div></div>
-      <div class="tl-item pending"><strong>Livrée</strong><div class="meta">À venir</div></div>
-    </div>
-  </section>
+<section id="pharmacies" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('home')"><i class="fa-solid fa-arrow-left"></i></button><b>Marketplace santé</b><span></span></div>
+  <div class="feature" style="margin-bottom:16px"><div class="feature-icon"><i class="fa-solid fa-prescription-bottle-medical"></i></div><div class="feature-copy"><strong>Depuis votre ordonnance</strong><small>Analysez les lignes de l'ordonnance et recherchez les pharmacies qui proposent les produits.</small></div></div>
+  <div class="field"><i class="fa-solid fa-magnifying-glass"></i><input id="pharmaSearch" placeholder="Rechercher une pharmacie ou un produit…" oninput="filterPharmacies(this.value)"></div>
+  <div class="section-head"><h2>Pharmacies proches</h2><button onclick="show('orderTrack')">Commandes</button></div>
+  <div id="pharmaList"></div>
+</section>
 
-  <!-- Demandes -->
-  <section id="requests" class="screen">
-    <div class="top"><button class="icon" onclick="show('home')">←</button><b>Mes demandes</b><span></span></div>
-    <div id="requestsList">
-      <div class="card">
-        <div class="hname">CHU Campus</div>
-        <div class="meta">Médecine générale · Fièvre, fatigue</div>
-        <span class="badge badge-wait">En attente d'analyse</span>
-      </div>
-    </div>
-  </section>
+<section id="pharmacyShop" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('pharmacies')"><i class="fa-solid fa-arrow-left"></i></button><b id="shopName">Pharmacie</b><span></span></div>
+  <div class="meta" id="shopMeta" style="margin-bottom:12px"></div>
+  <div class="tabs"><button class="tab active">Tous</button><button class="tab">Médicaments</button><button class="tab">Parapharmacie</button></div>
+  <div class="product-grid" id="productGrid"></div>
+  <button class="primary" style="margin-top:20px" onclick="show('checkout')"><i class="fa-solid fa-cart-shopping"></i>&nbsp; Voir le panier</button>
+</section>
 
-  <!-- Profile -->
-  <section id="profile" class="screen">
-    <div class="top"><button class="icon" onclick="show('home')">←</button><b>Profil</b><span></span></div>
-    <div class="notice">Votre espace patient : informations personnelles, assurances et paramètres.</div>
-    <button class="secondary" style="margin-top:16px" onclick="show('carnet')">Ouvrir mon carnet de santé</button>
-  </section>
+<section id="checkout" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('pharmacyShop')"><i class="fa-solid fa-arrow-left"></i></button><b>Commande</b><span></span></div>
+  <div class="card"><div class="hname">Votre panier</div><div class="meta">Les produits seront réservés auprès de la pharmacie.</div><div style="margin-top:14px"><b id="cartTotal">4 400 FCFA</b></div></div>
+  <div class="stack"><button class="primary" onclick="confirmOrder()"><i class="fa-solid fa-credit-card"></i>&nbsp; Payer en ligne</button><button class="secondary" onclick="confirmOrder()"><i class="fa-solid fa-person-walking"></i>&nbsp; Réserver pour retrait</button><button class="secondary" onclick="confirmOrder()"><i class="fa-solid fa-truck"></i>&nbsp; Demander une livraison</button></div>
+</section>
 
-  <!-- Bottom nav -->
-  <nav id="bottomNav" class="bottom" aria-label="Navigation principale">
-    <button class="nav" data-nav="home" onclick="show('home')">🏠<span>Accueil</span></button>
-    <button class="nav" data-nav="hospitals" onclick="show('hospitals')">🏥<span>Hôpitaux</span></button>
-    <button class="nav" data-nav="requests" onclick="show('requests')">📋<span>Demandes</span></button>
-    <button class="nav" data-nav="carnet" onclick="show('carnet')">📔<span>Carnet</span></button>
-    <button class="nav" data-nav="profile" onclick="show('profile')">👤<span>Profil</span></button>
-  </nav>
+<section id="orderTrack" class="screen">
+  <div class="top"><button class="icon-btn" onclick="show('pharmacies')"><i class="fa-solid fa-arrow-left"></i></button><b>Suivi de commande</b><span></span></div>
+  <div class="order-card"><div class="hname">Commande <span id="orderId">#1258</span></div><div class="meta" id="orderMeta">Commande en cours</div></div>
+  <div class="timeline" style="margin-top:20px"><div class="tl-item"><strong>Commande reçue</strong><div class="meta">Demande enregistrée</div></div><div class="tl-item"><strong>Paiement / réservation</strong><div class="meta">Confirmé</div></div><div class="tl-item"><strong>Préparation</strong><div class="meta">En cours</div></div><div class="tl-item pending"><strong>Prête</strong><div class="meta">À venir</div></div><div class="tl-item pending"><strong>Livraison / retrait</strong><div class="meta">À venir</div></div></div>
+</section>
+
+<nav id="bottomNav" class="bottom" aria-label="Navigation principale">
+  <button class="nav" data-nav="home" onclick="show('home')"><i class="fa-solid fa-house"></i><span>Accueil</span></button>
+  <button class="nav" data-nav="hospitals" onclick="show('hospitals')"><i class="fa-solid fa-hospital"></i><span>Hôpitaux</span></button>
+  <button class="nav" data-nav="requests" onclick="show('requests')"><i class="fa-solid fa-clipboard-list"></i><span>Demandes</span></button>
+  <button class="nav" data-nav="pharmacies" onclick="show('pharmacies')"><i class="fa-solid fa-store"></i><span>Marketplace</span></button>
+  <button class="nav" data-nav="profile" onclick="show('profile')"><i class="fa-solid fa-user"></i><span>Profil</span></button>
+</nav>
 </main>
 
 <script>
-const CFG = { url: 'https://lhmiirzqhsiunnkmazbx.supabase.co', key: 'sb_publishable_RdKFl1VJ0s1eaEh96dm6FA_ZF3j-_By' };
-let db = null, hospitals = [], current = null, selectedInsurance = 'INAM';
-const postAuthScreens = new Set(['home','hospitals','map','detail','request','insurance','insuranceCard','requestSent','rdvConfirm','carnet','pharmacies','pharmacyShop','orderTrack','requests','profile']);
-
-function show(id) {
-  document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
-  const nav = document.getElementById('bottomNav');
-  const visible = postAuthScreens.has(id);
-  nav.classList.toggle('visible', visible);
-  nav.querySelectorAll('.nav').forEach(n => n.classList.toggle('active', n.dataset.nav === id));
-  if (id === 'home') loadHospitals();
-  if (id === 'hospitals') renderHospitals(hospitals);
-  if (id === 'carnet') switchCarnet('consult');
-}
-
-function esc(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]));
-}
-
-function card(h) {
-  return `<article class="hospital">
-    <img loading="lazy" src="${h.photo_url || ''}" onerror="this.style.display='none'">
-    <div class="hname">${esc(h.nom || 'Hôpital')}</div>
-    <div class="meta">
-      <span>★ ${Number(h.note || 0).toFixed(1)}</span>
-      <span>📍 ${h.distance_km ? Number(h.distance_km).toFixed(1) + ' km' : 'À proximité'}</span>
-      <span>Consultation : ${h.tarif_consultation ? Number(h.tarif_consultation).toLocaleString('fr-FR') + ' FCFA' : '—'}</span>
-    </div>
-    <div class="actions">
-      <button class="small" onclick="detail('${h.id}')">Détails</button>
-      <button class="small primary-small" onclick="startRequest('${h.id}')">Demander</button>
-    </div>
-  </article>`;
-}
-
-function renderHospitals(list) {
-  const html = list.length ? list.map(card).join('') : '<div class="notice">Aucun hôpital disponible.</div>';
-  document.getElementById('homeList').innerHTML = list.slice(0, 3).map(card).join('') || html;
-  document.getElementById('hospitalList').innerHTML = html;
-}
-
-async function loadHospitals() {
-  if (!db) return;
-  const { data, error } = await db.from('hopitaux').select('*').eq('publie', true).order('note', { ascending: false }).limit(30);
-  if (!error) {
-    hospitals = data || [];
-    renderHospitals(hospitals);
-  } else {
-    document.getElementById('homeList').innerHTML = '<div class="notice">Impossible de charger les hôpitaux.</div>';
-  }
-}
-
-function filter(q) {
-  q = (q || '').toLowerCase().trim();
-  renderHospitals(hospitals.filter(h => (h.nom || '').toLowerCase().includes(q) || (h.ville || '').toLowerCase().includes(q)));
-}
-
-function detail(id) {
-  const h = hospitals.find(x => String(x.id) === String(id));
-  if (!h) return;
-  current = h;
-  document.getElementById('detail').innerHTML = `
-    <div class="top"><button class="icon" onclick="show('hospitals')">←</button><b>Détail</b><span></span></div>
-    <div class="card">
-      <div class="hname">${esc(h.nom)}</div>
-      <div class="meta">★ ${Number(h.note || 0).toFixed(1)} · ${esc(h.adresse || h.ville || '')}</div>
-      <div class="meta" style="margin-top:8px">Consultation : ${h.tarif_consultation ? Number(h.tarif_consultation).toLocaleString('fr-FR') + ' FCFA' : 'À confirmer'}</div>
-    </div>
-    <div class="stack" style="margin-top:16px">
-      <button class="secondary" onclick="show('map')">Voir l'itinéraire</button>
-      <button class="primary" onclick="startRequest('${h.id}')">Demander une consultation</button>
-    </div>`;
-  show('detail');
-}
-
-function startRequest(id) {
-  current = hospitals.find(x => String(x.id) === String(id)) || current;
-  document.getElementById('reqHospital').innerHTML = `<div class="hname">${esc(current?.nom || 'Hôpital')}</div><div class="meta">Hôpital sélectionné</div>`;
-  show('request');
-}
-
-function goInsurance() {
-  const spec = document.getElementById('reqSpecialite').value;
-  if (!spec) return alert('Choisissez un type de consultation');
-  show('insurance');
-}
-
-function setInsured(yes) {
-  document.querySelectorAll('#insurance .tab').forEach((t, i) => t.classList.toggle('active', yes ? i === 0 : i === 1));
-  document.getElementById('insuranceForm').style.display = yes ? 'block' : 'none';
-}
-
-function selectInsurance(name) {
-  selectedInsurance = name;
-  document.querySelectorAll('#insurance .secondary').forEach(b => b.style.borderColor = b.textContent === name ? 'var(--white)' : '');
-}
-
-function goInsuranceCard() {
-  document.getElementById('insName').textContent = selectedInsurance;
-  document.getElementById('insNum').textContent = document.getElementById('numAssure').value || '—';
-  show('insuranceCard');
-}
-
-function submitRequest() {
-  const spec = document.getElementById('reqSpecialite').value;
-  const sympt = document.getElementById('reqSymptomes').value;
-  document.getElementById('sentSummary').innerHTML = `
-    <div class="hname">${esc(current?.nom || '')}</div>
-    <div class="meta">${esc(spec)} · ${esc(sympt || 'Symptômes non précisés')}</div>`;
-  show('requestSent');
-}
-
-function switchCarnet(tab) {
-  document.querySelectorAll('#carnet .tab').forEach((t, i) => {
-    t.classList.toggle('active', (tab === 'consult' && i === 0) || (tab === 'ordos' && i === 1) || (tab === 'analyses' && i === 2));
-  });
-  const content = document.getElementById('carnetContent');
-  if (tab === 'consult') {
-    content.innerHTML = `
-      <div class="card"><div class="hname">15 oct. 2026 — Médecine générale</div><div class="meta">Dr. Koffi Mensah · Fièvre, fatigue</div><button class="small" style="margin-top:8px">Voir</button></div>
-      <div class="card"><div class="hname">02 sept. 2026 — Pédiatrie</div><div class="meta">Dr. Agbodji · Suivi enfant</div><button class="small" style="margin-top:8px">Voir</button></div>`;
-  } else if (tab === 'ordos') {
-    content.innerHTML = `
-      <div class="card"><div class="hname">04 nov. 2026 — Dr. Koffi Mensah</div><div class="meta">Paracétamol, Amoxicilline…</div><button class="small" style="margin-top:8px" onclick="show('pharmacies')">Trouver en pharmacie</button></div>`;
-  } else {
-    content.innerHTML = `
-      <div class="card"><div class="hname">02 sept. 2026 — Glycémie</div><div class="meta">Résultat : 0,85 g/L</div></div>
-      <div class="card"><div class="hname">18 août 2026 — NFS</div><div class="meta">Résultat : OK</div></div>`;
-  }
-}
-
-function locate() {
-  if (!navigator.geolocation) return;
-  document.getElementById('locSub').textContent = 'Recherche de votre position…';
-  navigator.geolocation.getCurrentPosition(() => {
-    document.getElementById('locTitle').textContent = 'Localisation activée';
-    document.getElementById('locSub').textContent = 'Hôpitaux proches de votre position';
-  }, () => {
-    document.getElementById('locSub').textContent = 'Autorisation refusée ou indisponible';
-  });
-}
-
-async function login() {
-  if (!db) { loginErr.textContent = 'Connexion au service en cours…'; return; }
-  const { error } = await db.auth.signInWithPassword({ email: le.value.trim(), password: lp.value });
-  if (error) loginErr.textContent = error.message;
-  else show('home');
-}
-
-async function signup() {
-  if (!db) { signupErr.textContent = 'Connexion au service en cours…'; return; }
-  const { error } = await db.auth.signUp({
-    email: se.value.trim(),
-    password: sw.value,
-    options: { data: { prenom: sf.value.trim(), nom: sl.value.trim(), telephone: sp.value.trim() } }
-  });
-  if (error) signupErr.textContent = error.message;
-  else show('home');
-}
-
-function enterDemo() { show('home'); loadHospitals(); }
-
-setTimeout(() => show('auth'), 600);
-setTimeout(() => { if (document.getElementById('splash').classList.contains('active')) show('auth'); }, 1800);
-
-(async () => {
-  try {
-    const m = await Promise.race([
-      import('https://esm.sh/@supabase/supabase-js@2.118.0'),
-      new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000))
-    ]);
-    db = m.createClient(CFG.url, CFG.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
-    const { data } = await db.auth.getSession();
-    if (data.session) show('home');
-    loadHospitals();
-  } catch (e) { console.warn('Supabase différé:', e); }
-})();
+const CFG={url:'https://lhmiirzqhsiunnkmazbx.supabase.co',key:'sb_publishable_RdKFl1VJ0s1eaEh96dm6FA_ZF3j-_By'};
+let db=null,hospitals=[],current=null,selectedInsurance='INAM',insured=true,pharmacies=[{id:1,nom:'Pharmacie Centrale',distance:'1,2 km',rating:'4,6',open:'7h–22h'},{id:2,nom:'Pharmacie du Marché',distance:'2,8 km',rating:'4,4',open:'8h–21h'},{id:3,nom:'Pharmacie de la Paix',distance:'3,4 km',rating:'4,5',open:'24h/24'}];
+const postAuthScreens=new Set(['home','hospitals','map','detail','request','insurance','insuranceCard','requestSent','rdvConfirm','requests','profile','carnet','pharmacies','pharmacyShop','checkout','orderTrack']);
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id)?.classList.add('active');const nav=document.getElementById('bottomNav'),visible=postAuthScreens.has(id);nav.classList.toggle('visible',visible);nav.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.nav===id));if(id==='home')loadHospitals();if(id==='hospitals')renderHospitals(hospitals);if(id==='requests')loadRequests();if(id==='carnet')switchCarnet('consult');if(id==='pharmacies')renderPharmacies(pharmacies);if(id==='profile')loadProfile()}
+function enterDemo(){show('home')}
+function card(h){return `<article class="hospital"><img loading="lazy" src="${esc(h.photo_url||'')}" onerror="this.style.display='none'"><div class="hname">${esc(h.nom||'Hôpital')}</div><div class="meta"><span class="rating"><i class="fa-solid fa-star"></i> ${Number(h.note||0).toFixed(1)}</span><span><i class="fa-solid fa-location-dot"></i> ${h.distance_km?Number(h.distance_km).toFixed(1)+' km':'À proximité'}</span><span><i class="fa-solid fa-money-bill"></i> ${h.tarif_consultation?Number(h.tarif_consultation).toLocaleString('fr-FR')+' FCFA':'Tarif à confirmer'}</span></div><div class="actions"><button class="small" onclick="detail('${h.id}')"><i class="fa-solid fa-circle-info"></i> Détails</button><button class="small primary-small" onclick="startRequest('${h.id}')"><i class="fa-solid fa-paper-plane"></i> Demander</button></div></article>`}
+function renderHospitals(list){const html=list.length?list.map(card).join(''):'<div class="notice">Aucun hôpital disponible.</div>';document.getElementById('homeList').innerHTML=list.slice(0,3).map(card).join('')||html;document.getElementById('hospitalList').innerHTML=html}
+async function loadHospitals(){if(!db)return;const {data,error}=await db.from('hopitaux').select('*').eq('publie',true).order('note',{ascending:false}).limit(30);if(!error){hospitals=data||[];renderHospitals(hospitals)}else document.getElementById('homeList').innerHTML='<div class="notice">Impossible de charger les hôpitaux.</div>'}
+function filter(q){q=(q||'').toLowerCase().trim();renderHospitals(hospitals.filter(h=>(h.nom||'').toLowerCase().includes(q)||(h.ville||'').toLowerCase().includes(q)))}
+function detail(id){current=hospitals.find(x=>String(x.id)===String(id));if(!current)return;document.getElementById('detail').innerHTML=`<div class="top"><button class="icon-btn" onclick="show('hospitals')"><i class="fa-solid fa-arrow-left"></i></button><b>Détail de l'hôpital</b><span></span></div><div class="card"><div class="hname">${esc(current.nom)}</div><div class="meta"><span class="rating"><i class="fa-solid fa-star"></i> ${Number(current.note||0).toFixed(1)}</span><span><i class="fa-solid fa-location-dot"></i> ${esc(current.adresse||current.ville||'')}</span></div><div class="meta"><span><i class="fa-solid fa-money-bill"></i> Consultation: ${current.tarif_consultation?Number(current.tarif_consultation).toLocaleString('fr-FR')+' FCFA':'À confirmer'}</span></div></div><div class="stack" style="margin-top:16px"><button class="secondary" onclick="show('map')"><i class="fa-solid fa-route"></i>&nbsp; Voir l'itinéraire</button><button class="primary" onclick="startRequest('${current.id}')"><i class="fa-solid fa-stethoscope"></i>&nbsp; Demander une consultation</button></div>`;show('detail')}
+function startRequest(id){current=hospitals.find(x=>String(x.id)===String(id))||current;document.getElementById('reqHospital').innerHTML=`<div class="hname">${esc(current?.nom||'Hôpital')}</div><div class="meta"><i class="fa-solid fa-location-dot"></i> ${esc(current?.ville||'')}</div>`;show('request')}
+function goInsurance(){if(!document.getElementById('reqSpecialite').value)return alert('Choisissez un type de consultation');show('insurance')}
+function setInsured(yes){insured=yes;document.querySelectorAll('#insurance .tab').forEach((t,i)=>t.classList.toggle('active',yes?i===0:i===1));document.getElementById('insuranceForm').classList.toggle('hidden',!yes)}
+function selectInsurance(name){selectedInsurance=name;document.querySelectorAll('#insuranceForm .secondary').forEach(b=>b.style.borderColor=b.textContent.includes(name)?'var(--white)':'')}
+function goInsuranceCard(){document.getElementById('insName').textContent=selectedInsurance;document.getElementById('insNum').textContent=document.getElementById('numAssure').value||'—';show('insuranceCard')}
+async function submitRequest(){const spec=document.getElementById('reqSpecialite').value,sympt=document.getElementById('reqSymptomes').value;document.getElementById('sentSummary').innerHTML=`<div class="hname">${esc(current?.nom||'')}</div><div class="meta">${esc(spec)} · ${esc(sympt||'Symptômes non précisés')}</div><div class="meta"><i class="fa-solid fa-clock"></i> Le médecin fixera ensuite la date et l'heure.</div>`;show('requestSent');if(!db||!current)return;try{const {data:ud}=await db.auth.getUser();const uid=ud?.user?.id;let patientId=null;if(uid){const {data:p}=await db.from('patients').select('id').eq('user_id',uid).maybeSingle();patientId=p?.id||null}if(patientId){await db.from('rendez_vous').insert({hopital_id:current.id,patient_id:patientId,statut:'en_attente',specialite:spec,motif:sympt||null,assurance:insured?selectedInsurance:null,numero_assure:insured?(document.getElementById('numAssure').value||null):null})}}catch(e){console.warn('Demande non persistée',e)}}
+async function loadRequests(){document.getElementById('requestsList').innerHTML='<div class="notice">Chargement…</div>';document.getElementById('requestsList').innerHTML='<div class="card"><div class="hname">'+esc(current?.nom||'Votre demande')+'</div><div class="meta">Consultation · <span class="badge badge-wait"><i class="fa-solid fa-hourglass-half"></i> En attente d’analyse</span></div><div class="meta">Le médecin fixe la date et l’heure après analyse.</div></div>'}
+function switchCarnet(tab){document.querySelectorAll('#carnet .tab').forEach((t,i)=>t.classList.toggle('active',(tab==='consult'&&i===0)||(tab==='ordos'&&i===1)||(tab==='analyses'&&i===2)));const c=document.getElementById('carnetContent');if(tab==='consult')c.innerHTML='<div class="card"><div class="hname">Consultations</div><div class="meta">Vos consultations apparaîtront ici avec la date, le professionnel et le motif.</div></div>';else if(tab==='ordos')c.innerHTML='<div class="card"><div class="hname">Ordonnances</div><div class="meta">Vos ordonnances numériques apparaîtront ici.</div><button class="small primary-small" style="margin-top:10px" onclick="show(&quot;pharmacies&quot;)"><i class="fa-solid fa-store"></i> Trouver en pharmacie</button></div>';else c.innerHTML='<div class="card"><div class="hname">Analyses</div><div class="meta">Vos résultats d’analyses apparaîtront ici.</div></div>'}
+function locate(){if(!navigator.geolocation)return;document.getElementById('locSub').textContent='Recherche de votre position…';navigator.geolocation.getCurrentPosition(()=>{document.getElementById('locTitle').textContent='Localisation activée';document.getElementById('locSub').textContent='Hôpitaux proches de votre position';document.getElementById('mapCard').innerHTML='<i class="fa-solid fa-location-crosshairs"></i> Position détectée. Vous pouvez maintenant consulter les itinéraires.'},()=>document.getElementById('locSub').textContent='Autorisation refusée ou indisponible')}
+async function login(){if(!db){loginErr.textContent='Connexion au service en cours…';return}const {error}=await db.auth.signInWithPassword({email:le.value.trim(),password:lp.value});if(error)loginErr.textContent=error.message;else show('home')}
+async function signup(){if(!db){signupErr.textContent='Connexion au service en cours…';return}const {data,error}=await db.auth.signUp({email:se.value.trim(),password:sw.value,options:{data:{prenom:sf.value.trim(),nom:sl.value.trim(),telephone:sp.value.trim()}}});if(error)signupErr.textContent=error.message;else{await ensureProfile(data.user);show('home')}}
+async function ensureProfile(user){if(!db||!user)return;try{await db.from('profiles').upsert({id:user.id,role:'patient',prenom:user.user_metadata?.prenom||'',nom:user.user_metadata?.nom||'',telephone:user.user_metadata?.telephone||''},{onConflict:'id'});await db.from('patients').upsert({user_id:user.id,prenom:user.user_metadata?.prenom||'',nom:user.user_metadata?.nom||'',telephone:user.user_metadata?.telephone||''},{onConflict:'user_id'})}catch(e){}}
+async function loadProfile(){if(!db)return;const {data}=await db.auth.getUser();const u=data?.user;if(u){const n=[u.user_metadata?.prenom,u.user_metadata?.nom].filter(Boolean).join(' ')||u.email||'Patient';document.getElementById('profileName').textContent=n;document.getElementById('hello').textContent=n;document.getElementById('profileMeta').textContent=u.email||'Votre espace personnel'}}
+async function logout(){if(db)await db.auth.signOut();show('auth')}
+function renderPharmacies(list){document.getElementById('pharmaList').innerHTML=list.map(p=>`<div class="pharma-card"><div class="hname">${esc(p.nom)}</div><div class="meta"><span class="rating"><i class="fa-solid fa-star"></i> ${p.rating}</span><span><i class="fa-solid fa-location-dot"></i> ${p.distance}</span><span><i class="fa-solid fa-clock"></i> ${p.open}</span></div><div class="actions"><button class="small" onclick="openShop(${p.id})"><i class="fa-solid fa-store"></i> Boutique</button><button class="small primary-small" onclick="show('map')"><i class="fa-solid fa-route"></i> Itinéraire</button></div></div>`).join('')}
+function filterPharmacies(q){q=(q||'').toLowerCase();renderPharmacies(pharmacies.filter(p=>p.nom.toLowerCase().includes(q)))}
+function openShop(id){const p=pharmacies.find(x=>x.id===id)||pharmacies[0];document.getElementById('shopName').textContent=p.nom;document.getElementById('shopMeta').innerHTML=`<i class="fa-solid fa-star"></i> ${p.rating} · ${p.distance} · ${p.open}`;document.getElementById('productGrid').innerHTML=[['Paracétamol 500 mg','1 500 FCFA'],['Amoxicilline 1 g','2 900 FCFA'],['Vitamine C','2 000 FCFA'],['Pansement','1 200 FCFA']].map(x=>`<div class="product"><div class="product-img"><i class="fa-solid fa-pills"></i></div><div class="hname">${x[0]}</div><div class="meta">${x[1]}</div><button class="small primary-small" style="margin-top:8px;width:100%"><i class="fa-solid fa-plus"></i> Ajouter</button></div>`).join('');show('pharmacyShop')}
+function confirmOrder(){document.getElementById('orderMeta').textContent='Demande enregistrée — préparation en cours';show('orderTrack')}
+setTimeout(()=>{show('auth')},700);
+(async()=>{try{const m=await Promise.race([import('https://esm.sh/@supabase/supabase-js@2.118.0'),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),3500))]);db=m.createClient(CFG.url,CFG.key);const {data}=await db.auth.getUser();if(data?.user){await ensureProfile(data.user);show('home')}}catch(e){}})();
 </script>
 </body>
 </html>
