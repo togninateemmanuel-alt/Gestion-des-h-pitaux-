@@ -1,7 +1,7 @@
 /* Ordonnance Mobile - couche commune Patient/Hôpital/Pharmacie/Admin */
 (function(){
- const SUPABASE_URL='https://qiiqirkhdjfmtduzoqqk.supabase.co';
- const SUPABASE_ANON_KEY='sb_publishable_wsJjuTPF3o_efMRFONly_w_YsgVFgZ8';
+ const SUPABASE_URL='https://lhmiirzqhsiunnkmazbx.supabase.co';
+ const SUPABASE_ANON_KEY='sb_publishable_RdKFl1VJ0s1eaEh96dm6FA_ZF3j-_By';
  const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
  window.OM={sb,SUPABASE_URL,SUPABASE_ANON_KEY,
   status:{rdv:['en_attente','attente','constantes','termine','annule'],commande:['en_attente','en_attente_paiement','paye','en_preparation','livre','annulee']},
